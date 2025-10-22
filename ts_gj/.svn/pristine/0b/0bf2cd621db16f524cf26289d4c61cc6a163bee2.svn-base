@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+	<th:block th:replace="/layout/example_head :: head"></th:block>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 (모바일용) -->
+    <button class="menu-toggle" onclick="toggleMenu()">☰ 메뉴</button>
+    
+    <!-- 상단 메뉴 -->
+    <header class="top-menu">
+        <div th:replace="layout/example_header :: topMenu"></div>
+    </header>
+    
+    <div class="main-container">
+        <!-- 사이드 메뉴 -->
+        <aside class="aside-menu" id="asideMenu">
+            <div th:replace="layout/example_header :: asideMenu"></div>
+        </aside>
+        
+        <!-- 메인 컨텐츠 -->
+        <div class="content-wrapper" id="contentWrapper">
+            <div class="content">
+                <h1>콘텐츠 영역입니다</h1>
+                <p>여기에 본문 내용이 들어갑니다.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 푸터 -->
+    <footer id="footer">
+        <div th:replace="layout/example_footer :: footer"></div>
+    </footer>
+</body>
+</html>

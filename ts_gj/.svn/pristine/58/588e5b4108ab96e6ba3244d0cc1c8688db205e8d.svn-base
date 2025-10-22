@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.operation.service.impl.DrivingStatusMapper">
+
+	<!-- 운행현황판 - 노선 운행 현황 - 노선 목록 -->
+    <select id="selectRteList" resultType="egovMap">
+    	SELECT  rte_id
+    		  , rte_nm
+    	FROM cmm_rte_info
+		WHERE 1 = 1
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+		    AND JSON_OVERLAPS(
+		        ownr_nm_list,
+		        JSON_ARRAY(
+		            <foreach collection="authOwnrList" item="ownr" separator=",">
+		                #{ownr}
+		            </foreach>
+		        )
+		    )
+		</if>
+		<if test="ownrNm != null and ownrNm != ''">
+		    <choose>
+		        <when test="ownrNm != 'all'">
+		            AND JSON_OVERLAPS(
+		                ownr_nm_list,
+		                JSON_ARRAY(#{ownrNm})
+		            )
+		        </when>
+		    </choose>
+		</if>
+    	ORDER BY rte_nm ASC
+    </select>
+    
+    <!-- 운행현황판 - 노선 운행 현황 - 노선 좌표 -->
+    <select id="selectRteCoord" resultType="egovMap">
+    	SELECT  rte_id
+    		  , rte_nm
+    		  , rte_path
+    		  , dppl_lat
+    		  , dppl_lng
+    		  , arvl_lat
+    		  , arvl_lng
+    	FROM cmm_rte_info
+    	WHERE 1 = 1
+    	AND rte_id = #{rteId}
+    </select>
+
+	<!-- 운행현황판 - 노선 운행 현황 - 통계데이터 -->
+    <select id="selectDrivingHistStatistics" resultType="egovMap">
+		SELECT
+		      aros.rte_id,
+		      cvi.ownr_nm,
+		      COUNT(*) AS total_opr_cnt,
+		      SUM(aros.opr_dstnc) AS sum_opr_dstnc,
+		      SUM(aros.cb)/1000000 AS sum_cb_ton,
+		      <!-- 연료별 연비 계산 -->
+		      IFNULL(
+		        SUM(CASE WHEN cvi.fuel_cd IN ('FU06', 'FU02') THEN aros.opr_dstnc ELSE 0 END) / 
+		        NULLIF(SUM(CASE WHEN cvi.fuel_cd IN ('FU06', 'FU02') THEN aros.fuel_csptn ELSE 0 END), 0)
+		      , 0) AS fuel_ecnm_fu06,
+		
+		      IFNULL(
+		        SUM(CASE WHEN cvi.fuel_cd = 'FU05' THEN aros.opr_dstnc ELSE 0 END) / 
+		        NULLIF(SUM(CASE WHEN cvi.fuel_cd = 'FU05' THEN aros.fuel_csptn ELSE 0 END), 0)
+		      , 0) AS fuel_ecnm_fu05,
+		
+		      IFNULL(
+		        SUM(CASE WHEN cvi.fuel_cd = 'FU04' THEN aros.opr_dstnc ELSE 0 END) / 
+		        NULLIF(SUM(CASE WHEN cvi.fuel_cd = 'FU04' THEN aros.fuel_csptn ELSE 0 END), 0)
+		      , 0) AS fuel_ecnm_fu04
+		      
+		FROM anls_rte_opr_stat aros
+		LEFT JOIN cmm_vhcl_info cvi ON aros.vhcl_sn = cvi.vhcl_sn
+		WHERE 1=1
+		  AND aros.rte_id = #{rteId}
+		  AND aros.frst_dt BETWEEN CONCAT(#{startDate}, ' 00:00:00') AND CONCAT(#{endDate}, ' 23:59:59')
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+   	        AND cvi.ownr_nm IN
+   	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+   	            #{ownr}
+   	        </foreach>
+   	    </if>
+   	    <if test="ownrNm != null and ownrNm != ''">
+   	    	<choose>
+    	    	<when test="ownrNm != 'all'">
+    	    	and cvi.ownr_nm = #{ownrNm}
+    	    	</when>
+   	    	</choose>
+   	    </if>
+		GROUP BY aros.rte_id
+    </select>
+
+    <!-- 운행현황판 - 노선 운행 현황 - 노선 운행 목록 -->
+    <select id="selectDrivingHistList" resultType="egovMap">
+   	    SELECT
+		      aros.rte_id
+		    , aros.vhcl_sn
+		    , cvi.reg_no
+		    , cvi.ownr_nm
+		    , IFNULL(SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))), 0) AS sum_opr_dstnc
+		    , IFNULL(SUM(CAST(aros.cb AS DECIMAL(18,2))) / 1000, 0) AS sum_cb_kg
+		    , IFNULL(SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))) /
+		              NULLIF(SUM(CAST(aros.fuel_csptn AS DECIMAL(18,2))),0), 0) AS fuel_ecnm
+		FROM anls_rte_opr_stat aros
+		LEFT OUTER JOIN cmm_vhcl_info cvi
+		    ON aros.vhcl_sn = cvi.vhcl_sn
+		WHERE 1 = 1
+		  AND aros.rte_id = #{rteId}
+		  AND aros.frst_dt BETWEEN CONCAT(#{startDate}, ' 00:00:00')
+		                        AND CONCAT(#{endDate}, ' 23:59:59')
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+		    AND cvi.ownr_nm IN
+		    <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+		        #{ownr}
+		    </foreach>
+		</if>
+		<if test="ownrNm != null and ownrNm != ''">
+		    <choose>
+		        <when test="ownrNm != 'all'">
+		        AND cvi.ownr_nm = #{ownrNm}
+		        </when>
+		    </choose>
+		</if>
+		GROUP BY
+		      aros.rte_id
+		    , aros.vhcl_sn
+		    , cvi.reg_no
+		    , cvi.ownr_nm
+		HAVING SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))) > 0    -- ✅ 집계 결과 필터
+		ORDER BY cvi.reg_no ASC
+		LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+    
+    <!-- 운행현황판 - 노선 운행 현황 - 노선 운행 목록 갯수 -->
+    <select id="selectDrivingHistListCnt">
+		SELECT COUNT(*)
+		FROM (
+		    SELECT
+		          aros.rte_id
+		        , aros.vhcl_sn
+		        , cvi.reg_no
+		        , cvi.ownr_nm
+		        , IFNULL(SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))), 0) AS sum_opr_dstnc
+		        , IFNULL(SUM(CAST(aros.cb AS DECIMAL(18,2))) / 1000, 0) AS sum_cb_kg
+		        , IFNULL(
+		            SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))) /
+		            NULLIF(SUM(CAST(aros.fuel_csptn AS DECIMAL(18,2))), 0),
+		            0
+		          ) AS fuel_ecnm
+		    FROM anls_rte_opr_stat aros
+		    LEFT OUTER JOIN cmm_vhcl_info cvi
+		        ON aros.vhcl_sn = cvi.vhcl_sn
+		    WHERE 1 = 1
+		      AND aros.rte_id = #{rteId}
+		      AND aros.frst_dt BETWEEN CONCAT(#{startDate}, ' 00:00:00')
+		                            AND CONCAT(#{endDate}, ' 23:59:59')
+		    <if test="authOwnrList != null and authOwnrList.size() > 0">
+		        AND cvi.ownr_nm IN
+		        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+		            #{ownr}
+		        </foreach>
+		    </if>
+		    <if test="ownrNm != null and ownrNm != ''">
+		        <choose>
+		            <when test="ownrNm != 'all'">
+		            AND cvi.ownr_nm = #{ownrNm}
+		            </when>
+		        </choose>
+		    </if>
+		    GROUP BY
+		          aros.rte_id
+		        , aros.vhcl_sn
+		        , cvi.reg_no
+		        , cvi.ownr_nm
+		    HAVING SUM(CAST(aros.opr_dstnc AS DECIMAL(18,2))) > 0   -- ✅ 집계 후 0 제외
+		) t
+    </select>
+    
+    <!-- 운행현황판 - 노선 운행 현황 - 노선 운행 상세 목록 -->
+    <select id="selectRouteHistDetailList" resultType="egovMap">
+    	SELECT  aros.rte_opr_stat_sn
+			  , aros.rte_id
+			  , aros.vhcl_sn
+			  , cvi.reg_no
+			  , cvi.ownr_nm
+			  , aros.fuel_csptn
+			  , IFNULL((CAST(aros.cb AS DECIMAL(18,2)) / 1000), 0)	AS cb 
+			  , aros.opr_dstnc      
+	    	  , IFNULL(CAST(aros.opr_dstnc AS DECIMAL(18,2)) / CAST(aros.fuel_csptn AS DECIMAL(18,2)), 0) AS fuel_ecnm   
+			  , DATE_FORMAT(aros.frst_dt, '%Y-%m-%d %H:%i:%s') AS frst_dt
+			  , DATE_FORMAT(aros.last_dt, '%Y-%m-%d %H:%i:%s') AS last_dt
+			  , DATE_FORMAT(aros.reg_dt, '%Y-%m-%d %H:%i:%s') AS reg_dt
+		FROM anls_rte_opr_stat aros
+		LEFT OUTER JOIN cmm_vhcl_info cvi
+		ON aros.vhcl_sn = cvi.vhcl_sn
+		WHERE 1 = 1
+		AND aros.rte_id = #{rteId}
+		AND cvi.reg_no = #{regNo}
+		AND aros.frst_dt BETWEEN CONCAT(#{startDate}, ' 00:00:00') AND CONCAT(#{endDate}, ' 23:59:59')
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+   	        AND cvi.ownr_nm IN
+   	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+   	            #{ownr}
+   	        </foreach>
+   	    </if>
+   	    <if test="ownrNm != null and ownrNm != ''">
+   	    	<choose>
+    	    	<when test="ownrNm != 'all'">
+    	    	and cvi.ownr_nm = #{ownrNm}
+    	    	</when>
+   	    	</choose>
+   	    </if>
+   	    ORDER BY aros.frst_dt DESC
+    </select>
+    
+    <!-- 운행현황판 - 위험 운행 지도 - 위험운행좌표 -->
+    <select id="selectDgrCrdList" resultType="egovMap">
+    	SELECT  avdocrd.ownr_nm
+    		  , avdocrd.vhcl_sn
+    		  , cvi.reg_no
+    		  , DATE_FORMAT(avdocrd.ocrn_dt, '%Y-%m-%d %H:%i:%s') AS ocrn_dt
+    		  , avdocrd.ocrn_doc
+    		  , avdocrd.ovr_spd_crd
+    		  , avdocrd.sud_dclr_crd
+    		  , avdocrd.sud_accl_crd
+    		  , avdocrd.sud_stop_crd
+    		  , avdocrd.sud_strt_crd
+    		  , DATE_FORMAT(avdocrd.reg_dt, '%Y-%m-%d %H:%i:%s') AS reg_dt
+    	FROM anls_vhcl_dgr_opr_crd_data avdocrd
+    	LEFT OUTER JOIN cmm_vhcl_info cvi
+    		ON avdocrd.vhcl_sn = cvi.vhcl_sn
+    	WHERE 1 = 1
+    	AND avdocrd.ocrn_dt BETWEEN CONCAT(#{ocrnDt}, ' 00:00:00') AND CONCAT(#{ocrnDt}, ' 23:59:59')
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+   	        AND avdocrd.ownr_nm IN
+   	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+   	            #{ownr}
+   	        </foreach>
+   	    </if>
+   	    <if test="ownrNm != null and ownrNm != ''">
+   	    	<choose>
+    	    	<when test="ownrNm != 'all'">
+    	    	and avdocrd.ownr_nm = #{ownrNm}
+    	    	</when>
+   	    	</choose>
+   	    </if>
+    </select>
+    
+</mapper>

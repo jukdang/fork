@@ -1,0 +1,192 @@
+			<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+	<script th:src="@{/js/egovframework/common.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="history">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		    	<!-- 진단내역 : S -->
+		        <div class="wrapper">
+	                <div class="filter_area wh_box">
+						<div class="filter_box_wrap">
+							<div class="filter_box">
+								<div th:replace="/common/ownrSelect :: ownr-select"></div>
+				    		</div>
+ 		                    <!-- 차량번호 검색 -->
+                            <div class="filter_box">
+                                <label for="regNoInput" >차량번호</label>
+                                <div class="filter_input_area">
+                                    <input type="text" id="regNoInput" placeholder="예) 광주12가3456">
+                                    <ul class="dropdown" id="dropdown" style="display:none;"></ul>
+                                    <th:block th:replace="/common/regNo :: regNo-search"></th:block>
+                                </div>
+                            </div>
+                            <!-- 
+							<div class="filter_box">
+				    			<label>기간</label>
+				    			<span class="time_box">
+									<input type="date" id="startDt">
+							        <em>~</em>
+							        <input type="date" id="endDt">
+							        <script>
+								        // 오늘 날짜
+								        const today = dayjs();
+								        
+								        // 7일 후 날짜 계산
+								        const sevenDaysLater = today.add(-7, 'day');
+								        
+								        // 기본값 설정 (YYYY-MM-DD 형식)
+								        document.getElementById('startDt').value = sevenDaysLater.format('YYYY-MM-DD');
+								        document.getElementById('endDt').value = today.format('YYYY-MM-DD');
+								    </script>
+								</span>
+				    		</div>
+                             -->
+			    		</div>
+			    		<button class="btn lg black btn_search" id="searchBtn">조회</button>
+					</div>
+					<div class="cont_section">
+<!-- 						<div class="set_box type02"> -->
+<!-- 							<label>정렬</label> -->
+<!-- 							<span> -->
+<!-- 								<select id="order"> -->
+<!-- 									<option value="danger">위험순</option> -->
+<!-- 									<option value="dist">운행거리순</option> -->
+<!-- 								</select> -->
+<!-- 							</span> -->
+<!-- 						</div> -->
+
+						<!-- 조회 결과 없을 경우 공통 -->
+						<div class="cont_none_wrap" style="display: none;">
+							<div class="cont_none type02">
+						 		<i class="fa-solid fa-file-circle-xmark"></i>
+						 		<p>조회 결과가 없습니다.</p>
+						 	</div>
+					 	</div>
+					 	
+						<ul class="vehicle_card_wrap" id="diagnosisHistArea">
+						</ul>
+						
+						<div class="paging" id="paging">
+			    			<span class="num">
+				    			<a href="#" class="first disable"><i class="fa fa-angle-double-left"></i></a>
+				    			<a href="#" class="pre disable"><i class="fa fa-angle-left"></i></a>
+				    			<span class="num">
+					    			<a class="pageNoClass on">1</a>
+					    			<a class="pageNoClass">2</a>
+					    			<a class="pageNoClass">3</a>
+					    			<a class="pageNoClass">4</a>
+				    			</span>
+				    			<a href="#" class="next disable"><i class="fa fa-angle-right"></i></a>
+				    			<a href="#" class="last"><i class="fa fa-angle-double-right"></i></a>
+			    			</span>
+				    	</div>
+					</div>
+	            </div>
+	            <!-- 진단내역 : E -->
+	       	</div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+	    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+<script>
+	$(document).ready(function() {
+		getDiagnosisHistList();
+		$("#searchBtn").on("click", function() {
+			getDiagnosisHistList();
+		});
+		
+		$('#diagnosisHistArea').on('click', 'li', function() {
+	        // 클릭된 li의 data-vhcl-sn 값 가져오기
+	        var vhclSn = $(this).data('vhcl-sn');
+	        window.location.href = contextPath + `/vehicle/diagnosisHistoryResult?vhclSn=${vhclSn}`;
+	    });
+	});
+	function getDiagnosisHistList(pageIndex = 1){
+	    var ownrNm = $("#ownrSelect").val();
+// 		var startDt = $("#startDt").val();
+// 		var endDt = $("#endDt").val();
+// 	    var order = $("#order").val();
+		var regNo = $("#regNoInput").val();
+	    customFetch({
+	        url: '/vehicle/getDiagnosisHist',
+	        method: 'POST',
+	        params: {
+	        	ownrNm : ownrNm,
+	        	regNo : regNo,
+// 	        	startDt : startDt,
+// 	        	endDt : endDt,
+	        	pageIndex : pageIndex
+// 	        	order : order
+	        },
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            var html = '';
+	            $(".cont_none_wrap").hide();
+	            $("#diagnosisHistArea").empty();
+	            if (response && response.data && response.data.list) {
+		            var data = response.data.list;
+		            var fuelNm = '';
+		            if(data.length > 0){
+		            	for(const item of data){
+		            		if(item.fuelCd == 'FU06'){
+		            			fuelNm = 'CNG';
+		            		}else if(item.fuelCd == 'FU02'){
+		            			fuelNm = '경유';
+		            		}else if(item.fuelCd == 'FU05'){
+		            			fuelNm = '수소';
+		            		}else if(item.fuelCd == 'FU04'){
+		            			fuelNm = '전기';
+		            		}else{
+		            			fuelNm = item.fuelCd;
+		            		}
+		            		html += `<li data-vhcl-sn="${item.vhclSn}">
+								<div class="vehicle_card safe" tabindex="0">
+									<div class="vehicle_header">
+										<strong class="vehicle_number">${vhclMasked(item.regNo)}</strong>
+										<span class="badge safe">${fuelNm}</span>
+									</div>
+									<div class="vehicle_content">
+										<dl>
+											<dt>모델</dt>
+											<dd>${item.mdlNm}</dd>
+										</dl>
+										<dl>
+											<dt>연식</dt>
+											<dd>${item.mdlYr}</dd>
+										</dl>
+									</div>
+								</div>
+							</li>`
+		            	}
+		            	$("#diagnosisHistArea").html(html);
+		            	if (typeof setPagination === 'function') {
+	                        setPagination('paging', 'getDiagnosisHistList', response.data.paginationInfo);
+	                    }
+		            }else{
+		            	$(".cont_none_wrap").show();
+		            	setPagination('paging', 'getDiagnosisHistList', response.data.paginationInfo);
+		            }
+	            }
+	        },
+	        onError: (error) => console.error('에러:', error)
+	    });
+	}
+</script>
+</body>
+</html>

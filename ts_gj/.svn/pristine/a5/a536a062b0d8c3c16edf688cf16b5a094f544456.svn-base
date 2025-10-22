@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/egovframework/font.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/egovframework/ai-check-manual.css}">
+    <title>AI 실시간 부품 정비 지침서</title>
+</head>
+<body>
+    <div class="container">
+    	<div class="manual_wrap check_manual">
+	        <div class="manual_header">
+	            <h1>AI 실시간 부품 정비 지침서</h1>
+	            <!-- <p>차량정비 - AI 실시간 고장코드 점검 지침서</p> -->
+	        </div>
+	        
+
+            <!-- Thymeleaf를 사용하는 경우 -->
+            <div th:if="${result != null and result.dtlCn != null}" 
+                 th:utext="${result.dtlCn}">
+            </div>
+            
+            <!-- JSP/JSTL을 사용하는 경우 -->
+            <!-- 
+            <c:if test="${not empty result.dtlCn}">
+                ${result.dtlCn}
+            </c:if>
+            -->
+            
+            <!-- 내용이 없는 경우 -->
+            <div th:if="${result == null or result.dtlCn == null}">
+                <div class="popup_wrap popup_manual_wrap">
+            		<div class="popup_body popup_manual_body">
+            			<div class="cont_none type02">
+			                <!-- JSP의 경우: <c:if test="${empty result.dtlCn}"> -->
+			                <i class="fa-solid fa-file-circle-xmark"></i>
+			                <p>지침서 내용이 없습니다.<br>
+			                관리자에게 문의해주세요.</p>
+		                </div>
+	                </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 페이지 로드 후 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            // 테이블에 반응형 스크롤 추가
+            const tables = document.querySelectorAll('.manual-content table');
+            tables.forEach(table => {
+                const wrapper = document.createElement('div');
+                wrapper.style.overflowX = 'auto';
+                wrapper.style.margin = '20px 0';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            });
+            
+            // 이미지 클릭 시 새창으로 크게 보기
+            const images = document.querySelectorAll('.manual-content img');
+            images.forEach(img => {
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', function() {
+                    window.open(this.src, '_blank');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

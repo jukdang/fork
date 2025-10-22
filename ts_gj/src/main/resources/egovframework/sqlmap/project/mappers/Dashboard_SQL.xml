@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.dashboard.service.impl.DashboardMapper">
+    
+    <!-- 대시보드 - 금일 운행현황 - 현재 운행 차량 -->
+	<select id="selectOprVhclCnt">
+		SELECT 
+		   COUNT(*) AS totalCnt,
+		   SUM(CASE WHEN vhcl_stts = '1' 
+					   AND use_yn = 'Y'
+					   AND junk_yn = 'N'
+					   AND chck_stts IN ('0','1','2') THEN 1 ELSE 0 END) AS oprCnt
+		FROM anls_vhcl_stts_rt 
+	    where 1=1
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         and ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	</select>
+	
+	<!-- 대시보드 - 차량 실시간 위치  -->
+	<select id="selectLatestGpsCoordinates">
+		SELECT  vhcl_sn
+			  , ownr_nm
+			  , reg_no
+			  , mt_id
+			  , lat
+			  , lng
+			  , chck_stts
+			  , CAST(AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+			  , DATE_FORMAT(mdfcn_dt, '%Y-%m-%d %H:%i:%s') AS mdfcn_dt
+		FROM anls_vhcl_stts_rt 
+	    where 1=1
+	    	<!-- AND lat IS NOT NULL 
+	    	AND lng IS NOT null -->
+	    	AND mt_id IN 
+		    <foreach item="mtId" index="index" collection="activeMtIds" open="(" separator="," close=")">
+		        #{mtId}
+		    </foreach>
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         and ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	</select>
+	
+    <!-- 대시보드 - 금일 운행현황 - 현재 운행 현황 -->
+	<select id="selectOprVhclStatusCnt">
+		SELECT 
+		   SUM(CAST(opr_dstnc AS DECIMAL(10,2))) AS opr_dstnc,
+		   SUM(CAST(fuel_usage AS DECIMAL(10,2))) AS fuel_usage,
+		   SUM(CAST(cb AS DECIMAL(10,2))) AS cb,
+		   SUM(idle_tm) AS idle_tm
+		FROM anls_vhcl_opr_hstry 
+		WHERE 1=1
+		<![CDATA[
+			AND anls_dt >= CURDATE()
+			AND anls_dt < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+		]]> 
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         and ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	</select>
+	
+		
+    <!-- 대시보드 - 운행현황 추이 -->
+	<select id="selectOprStatusTrend">
+		SELECT 
+		   DATE_FORMAT(anls_dt, '%m/%d') AS anls_dt,
+		   SUM(CAST(opr_dstnc AS DECIMAL(10,2))) AS opr_dstnc,
+		   ROUND(SUM(CAST(opr_dstnc AS DECIMAL(10,2))) / SUM(CAST(fuel_usage AS DECIMAL(10,2))), 2) AS fuel_econom,
+		   ROUND(SUM(CAST(cb AS DECIMAL(10,2))) / 1000, 2) AS cb,
+		   ROUND(SUM(idle_tm) / 3600, 2) AS idle_tm
+		FROM anls_vhcl_opr_hstry 
+		WHERE 1=1
+			<![CDATA[
+				AND anls_dt >= DATE_SUB(CURDATE(), INTERVAL 8 DAY)
+				AND anls_dt < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+			]]> 
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         and ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+   	    GROUP BY DATE(anls_dt)
+		ORDER BY DATE(anls_dt) ASC
+	</select>
+		
+    <!-- 대시보드 - 차량 정보- 현재 운행 현황 -->
+	<select id="selectVhclOprInfo">
+		SELECT 
+		   vhcl_sn
+		   , SUM(CAST(opr_dstnc AS DECIMAL(10,2))) AS opr_dstnc
+		   , ROUND(SUM(CAST(opr_dstnc AS DECIMAL(10,2))) / SUM(CAST(fuel_usage AS DECIMAL(10,2))), 2) AS fuelEconom
+		   , ROUND(SUM(CAST(cb AS DECIMAL(10,2))) / 1000, 2) AS cb
+		   , ROUND(SUM(idle_tm) / 3600, 2) AS idle_tm
+		   , SUM(ovr_spd_cnt) AS ovr_spd_cnt -- 과속수
+		   , SUM(sud_dclr_cnt) AS sud_dclr_cnt -- 급감속수
+		   , SUM(sud_accl_cnt) AS sud_accl_cnt -- 급가속수
+		   , SUM(sud_stop_cnt) AS sud_stop_cnt -- 급정지수
+		   , SUM(sud_strt_cnt) AS sud_strt_cnt -- 급출발수
+		   , SUM(lng_ovr_spd_cnt) AS lng_ovr_spd_cnt -- 장기과속수
+		   , SUM(rpm2000_ovr_cnt) AS rpm2000_ovr_cnt -- rpm2000초과수
+		FROM anls_vhcl_opr_hstry 
+		WHERE 1=1
+		<![CDATA[
+			AND anls_dt >= CURDATE()
+			AND anls_dt < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+		]]> 
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         and ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+		GROUP BY vhcl_sn
+	</select>
+	
+	<!-- 대시보드 - 서비스 이용현황 -->
+	<select id="selectServiceUsageStatusByUsers">
+	    WITH RECURSIVE date_range AS (
+	        SELECT DATE_SUB(CURDATE(), INTERVAL 6 DAY) AS dt
+	        UNION ALL
+	        SELECT DATE_ADD(dt, INTERVAL 1 DAY)
+	        FROM date_range
+	        WHERE dt <![CDATA[<]]> CURDATE()
+	    )
+	    SELECT
+	        DATE_FORMAT(dr.dt, '%m/%d') AS date
+	        , COALESCE(COUNT(DISTINCT CASE WHEN s.mbr_role = 'ROLE_MECHANIC' THEN s.session_id END), 0) AS 정비사
+	        , COALESCE(COUNT(DISTINCT CASE WHEN s.mbr_role = 'ROLE_MANAGER' THEN s.session_id END), 0) AS 관리자
+<!-- 	        , COALESCE(COUNT(DISTINCT CASE WHEN s.mbr_role = 'ROLE_ADMIN' THEN s.session_id END), 0) AS 시스템관리자 -->
+	    FROM date_range dr
+	    LEFT JOIN svc_stat_use s 
+	        ON DATE(s.reg_dt) = dr.dt
+	        AND s.mbr_id != ''
+	        <if test="authOwnrList != null and authOwnrList.size() > 0">
+	        AND s.ownr_nm IN
+	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+	            #{ownr}
+	        </foreach>
+	        </if>
+	        <if test="ownrNm != null and ownrNm != ''">
+	        <choose>
+	        <when test="ownrNm != 'all'">
+	        AND s.ownr_nm = #{ownrNm}
+	        </when>
+    	    <when test="ownrNm == 'all'">
+	        OR s.ownr_nm = ''
+	        </when>
+	        </choose>
+	        </if>
+	    GROUP BY dr.dt
+	    ORDER BY dr.dt
+	</select>
+	
+</mapper>

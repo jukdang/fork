@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+    <script th:src="@{/js/egovframework/printThis/printThis.min.js}"></script>
+    <script th:src="@{/js/egovframework/common.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+	            
+	            <!-- 운행일지 상세 : S -->
+	            <div class="wrapper">
+	            	<div class="tit">
+	            		<h1 id="title"><span id="ownrNm" th:text="${result['ownrNm']}"></span> 운행일지</h1>
+	            		<button class="btn mid white" id="downloadBtn" onclick="pdfDownload();">다운로드</button>
+	            	</div>
+	            	<div class="wh_box">
+		            	<div class="tbl_box">
+			            	<table class="tbl03">
+							  <tbody>
+							    <!-- 운행 기초 정보 -->
+							    <tr>
+									<th rowspan="2" class="left_th">운행 기초 정보</th>
+									<th colspan="3">운행 일자</th>
+									<th colspan="4">운전원 성명</th>
+									<th colspan="2">승무 개시시간</th>
+									<th colspan="2">승무 종료시간</th>
+							    </tr>
+							    <tr>
+							    	<td colspan="3" th:text="${result['oprYmd']} + ' (' + ${result['day']} + ')'"></td>
+							    	<td colspan="4" th:text="${@maskingUtils.maskDriverName(result['oprtrNm'])}"></td>
+							    	<td colspan="2" th:text="${result['frstTm']}"></td>
+							    	<td colspan="2" th:text="${result['lastTm']}"></td>
+							    </tr>
+							
+							    <!-- 운행 시간표 -->
+							    <tr id="oprSchdlList">
+						            <!-- rowspan 계산은 JS에서 동적으로 처리 -->
+						            <th id="oprSchdlTh" class="left_th">
+						                운행시간표
+						            </th>
+									<th class="w5p">회차</th>
+									<th>기점</th>
+									<th>종점</th>
+									<th>기점 출발</th>
+									<th>종점 도착</th>
+									<th class="w6p">소요시간(분)</th>
+									<th>종점 출발</th>
+									<th>기점 도착</th>
+									<th class="w6p">소요시간(분)</th>
+									<th>차량번호</th>
+									<th class="w10p">노선명</th>
+							    </tr>
+							    <!-- <tr>
+									<td>1</td>
+									<td>기점</td>
+									<td>종점</td>
+									<td>06:30</td>
+									<td>08:30</td>
+									<td>120</td>
+									<td>08:40</td>
+									<td>10:30</td>
+									<td>110</td>
+									<td>9999</td>
+									<td>노선1</td>
+							    </tr>-->
+							    
+							    <!-- 주행 거리 정보 -->
+							    <tr>
+									<th rowspan="2" class="left_th">주행 거리 정보</th>
+									<th colspan="11">주행거리</th>
+							    </tr>
+							    <tr>
+							    	<td colspan="11" th:text="${#numbers.formatInteger(result['tdrvgDstnc'], 0, 'COMMA')} + ' km'">
+							    		<!-- 수정시 인풋 -->
+							    		<!-- <div class="input_td" style="display: none;"><span><input type="text">km</span></div> -->
+							    	</td>
+							    </tr>
+							    
+							    <!-- 당일 거래 내역 --><!-- 데이터 없음 -->
+							    <!-- <tr>
+									<th rowspan="3" class="left_th">당일 거래 내역<em>*카드(건)</em></th>
+							    </tr>
+							    <tr>
+							    	<th colspan="6">승차</th>
+							    	<th colspan="5">하차</th>
+							    </tr>
+							    <tr>
+							    	<td colspan="6" th:text="${#numbers.formatInteger(result['getOnCnt'], 0, 'COMMA')}">
+							    		수정시 인풋
+							    		<div class="input_td" style="display: none;"><input type="text"></div>
+							    	</td>
+							    	<td colspan="5" th:text="${#numbers.formatInteger(result['getOffCnt'], 0, 'COMMA')}">
+							    		수정시 인풋
+							    		<div class="input_td" style="display: none;"><input type="text"></div>
+							    	</td>
+							    </tr> -->
+							  </tbody>
+							</table>
+						</div>
+					
+					</div>
+					
+					<!-- <p class="info_text"><i class="fa-solid fa-circle-info"></i>운행일지의 승무 개시·종료 시간은 운행일 기준 7일 이내만 수정 가능하며, 수정된 내용은 다음날부터 서비스에 반영됩니다.</p> -->
+					
+					<div class="btn_area jfcenter">
+						<!-- <button class="btn mid blue">수정</button> -->
+						<!-- 수정 후 저장 버튼 -->
+						<!-- <button class="btn mid blue" style="display: none;">저장</button> -->
+						<!-- <button class="btn mid bd_blue" id="listBtn" onclick="goToList();">목록</button> -->
+					</div>
+
+	            </div>
+	            <!-- 운행일지 상세 : E -->
+	        </div>
+	       
+	    </div>
+		<!-- container : E -->
+		
+		 <!-- 푸터 -->
+		 <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script th:inline="javascript">
+	/*<![CDATA[*/
+	var oprSchdl = /*[[${result.oprSchdl}]]*/ '[]';
+	oprSchdl = JSON.parse(oprSchdl);
+	
+	var $prevTr = $('#oprSchdlList'); // 기준 tr
+	var $th = $('#oprSchdlTh');       // rowspan 적용할 th
+	
+	if (oprSchdl.length === 0) {
+	    // 데이터 없을 때
+	    var $tr = $('<tr>', { id: 'oprSchdlRowEmpty' });
+	    $tr.append(
+	        $('<td>', { colspan: 11, text: '운행 시간표가 없습니다.' })
+	    );
+	    $prevTr.after($tr);
+	    // rowspan = 2 (헤더 + 한 줄 없음 표시)
+	    $th.attr('rowspan', 2);
+	} else {
+	    // 데이터 있을 때
+	    $th.attr('rowspan', oprSchdl.length + 1); // header 포함
+	    $.each(oprSchdl, function(index, item) {
+	        var $tr = $('<tr>', { id: 'oprSchdlRow' + index });
+	        $tr.append(
+	            $('<td>').text(item['회차']),
+	            $('<td>').text(item['기점']),
+	            $('<td>').text(item['종점']),
+	            $('<td>').text(item['기점출발']),
+	            $('<td>').text(item['종점도착']),
+	            $('<td>').text(item['소요시간1']),
+	            $('<td>').text(item['종점출발']),
+	            $('<td>').text(item['기점도착']),
+	            $('<td>').text(item['소요시간2']),
+	            $('<td>').text(vhclMasked(item['차량번호'])),
+	            $('<td>').text(item['노선명'])
+	        );
+	        $prevTr.after($tr);
+	        $prevTr = $tr;
+	    });
+	}
+	/*]]>*/
+	</script>
+	
+	<script>
+	$(function() {
+	    const span = $("#ownrNm");
+	    span.text(ownrMasked(span.text()))
+	})
+	
+	//목록
+	function goToList() {
+		location.href = contextPath + "/operation/drivingLogList";
+	}
+	
+	//PDF 다운로드
+	function pdfDownload() {
+		
+		$("#downloadBtn").hide();
+		$("#listBtn").hide();
+		$("#container").addClass("driving-log-pdf");
+	
+		jQuery("#container").printThis({
+	
+			 debug: false,               // show the iframe for debugging
+	
+			 importCSS: true,            // import page CSS
+	
+			 importStyle: true,         // import style tags
+	
+			 printContainer: true,       // grab outer container as well as the contents of the selector
+	
+			 //loadCSS: "path/to/my.css",  // path to additional css file - us an array [] for multiple
+	
+			 pageTitle: $("#title").text(),              // add title to print page
+	
+			 //removeInline: false,        // remove all inline styles from print elements
+	
+			 printDelay: 200,            // variable print delay
+	
+			 header: null,               // prefix to html
+	
+			 footer: null,               // postfix to html
+	
+			 base: false,                // preserve the BASE tag, or accept a string for the URL
+	
+			 formValues: true,           // preserve input/form values
+	
+			 canvas: true,              // copy canvas elements (experimental)
+	
+			 doctypeString: '',       // enter a different doctype for older markup
+	
+			 removeScripts: false,       // remove script tags from print content
+		
+			 afterPrint: function() {
+	
+				 $("#downloadBtn").show();
+				 $("#listBtn").show();
+				 $("#container").removeClass("driving-log-pdf");
+				
+		     }
+	
+		});
+	}
+	</script>
+   
+</body>
+
+</html>

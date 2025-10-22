@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.mngr.service.impl.MngrRfidMapper">
+
+	<!-- 	운전자 RFID 정보 목록 -->
+	<select id="selectOperatorRfidList">
+	    SELECT
+	        oprtr_id
+	        , ownr_nm
+	        , rfid_no
+	        , CAST(AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+	        , lbl
+	        , reg_dt
+	        , mdfcn_dt
+	    FROM
+	        cmm_oprtr_rfid_info
+	    WHERE 1=1
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="oprtrNm != null and oprtrNm != ''">
+	    	    AND AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') LIKE CONCAT('%', #{oprtrNm}, '%')
+    	    </if>
+	    ORDER BY
+	        mdfcn_dt DESC
+		LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	</select>
+	
+<!-- 	운전자 RFID 정보 건수 -->
+	<select id="selectOperatorRfidListCnt">
+	    SELECT
+	    	count(*)
+	    FROM
+	        cmm_oprtr_rfid_info
+	    WHERE 1=1
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="oprtrNm != null and oprtrNm != ''">
+	    	    AND AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') LIKE CONCAT('%', #{oprtrNm}, '%')
+    	    </if>
+	</select>
+	
+<!-- 	RFID 중복 검사 -->
+	<select id="chkRfidNo">
+	    SELECT
+	    	oprtr_id
+	    	, ownr_nm
+	    	, rfid_no
+	    	, CAST(AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+	    	, lbl
+	    	, reg_dt
+	    	, mdfcn_dt
+	    FROM
+	        cmm_oprtr_rfid_info
+	    WHERE 1=1
+   	        AND rfid_no = #{rfidNo}
+   	        AND use_yn = 'Y'
+	</select>
+	
+		
+	<!-- RFID 관리 - 등록  -->
+	<insert id="insertRfidOprtr">
+        INSERT INTO cmm_oprtr_rfid_info (
+            oprtr_id
+	    	, ownr_nm
+	    	, rfid_no
+	    	, oprtr_nm
+<!-- 	    	, lbl -->
+        ) VALUES (
+            #{oprtrId}
+            , #{ownrSelect}
+            , #{rfidNo}
+			, TO_BASE64(AES_ENCRYPT(#{oprtrNm},'theimc'))
+<!--             , #{lbl} -->
+        )
+    </insert>
+    
+    <!-- 해당 운수회사의 마지막 운전원 번호 조회 -->
+	<select id="getLastOprtrSeq" parameterType="String" resultType="String">
+        SELECT SUBSTRING(oprtr_id, 3) AS last_seq
+	    FROM cmm_oprtr_rfid_info 
+	    WHERE oprtr_id LIKE CONCAT(#{oprtrPrefix}, '%')
+	        AND LENGTH(oprtr_id) = 6
+	    ORDER BY oprtr_id desc LIMIT 1
+	</select>
+	
+	<!-- 	운전자 RFID 정보 목록 -->
+	<select id="selectOperatorRfidResult">
+	    SELECT
+	        oprtr_id
+	        , ownr_nm
+	        , rfid_no
+	        , CAST(AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+	        , lbl
+	        , reg_dt
+	        , mdfcn_dt
+	    FROM
+	        cmm_oprtr_rfid_info
+	    WHERE 1=1
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    and oprtr_id = #{oprtrId}
+	</select>
+	
+		<!-- RFID 관리 - 수정  -->
+	<update id="updateRfidOprtr">
+		update cmm_oprtr_rfid_info set
+		oprtr_nm = TO_BASE64(AES_ENCRYPT(#{oprtrNm},'theimc'))
+		, rfid_no = #{rfidNo}
+		WHERE oprtr_id = #{oprtrId}
+			<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    </update>
+    
+   	<!-- 	RFID 태그 기록 - 운전자 목록 -->
+	<select id="selectRfidTagOperatorList">
+			SELECT  
+				DISTINCT 
+				cori.oprtr_id
+				, cori.ownr_nm
+				, CAST(AES_DECRYPT(FROM_BASE64(cori.oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+				, cori.lbl
+				, cori.rfid_no
+			FROM svc_opr_rfid_data sord
+			JOIN cmm_oprtr_rfid_info cori ON sord.rfid_no = cori.rfid_no
+			WHERE 1=1
+				AND cori.use_yn = 'Y'
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="oprtrNm != null and oprtrNm != ''">
+	    	    AND AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') LIKE CONCAT('%', #{oprtrNm}, '%')
+    	    </if>
+ 	        <![CDATA[
+		    	AND sord.tag_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND sord.tag_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+        ORDER BY cori.oprtr_id
+		LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	</select>
+	
+<!-- 	RFID 태그 기록 - 운전자 목록 건수 -->
+	<select id="selectRfidTagOperatorListCnt">
+	    SELECT COUNT(*) AS driver_count
+		FROM (
+			SELECT  
+				DISTINCT 
+				cori.oprtr_id
+				, cori.ownr_nm
+				, CAST(AES_DECRYPT(FROM_BASE64(cori.oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+				, cori.lbl
+				, cori.rfid_no
+			FROM svc_opr_rfid_data sord
+			JOIN cmm_oprtr_rfid_info cori ON sord.rfid_no = cori.rfid_no
+			WHERE 1=1
+				AND cori.use_yn = 'Y'
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="oprtrNm != null and oprtrNm != ''">
+	    	    AND AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') LIKE CONCAT('%', #{oprtrNm}, '%')
+    	    </if>
+ 	        <![CDATA[
+		    	AND sord.tag_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND sord.tag_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+	      	) AS distinct_drivers
+	</select>
+	
+	<!-- 	RFID 태그 기록 - 태그 목록 -->
+	<select id="selectRfidTagList">
+			SELECT  
+				data_sn
+				, mt_id
+				, rfid_no
+				, tag_dt
+				, reg_dt
+			FROM svc_opr_rfid_data 
+			WHERE 1=1
+				AND rfid_no = #{rfidNo}
+ 	        <![CDATA[
+		    	AND tag_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND tag_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+        ORDER BY tag_dt 
+        	<if test="order != null and order == 'asc'">
+	    	    asc
+    	    </if>
+        	<if test="order != null and order == 'desc'">
+	    	    desc
+    	    </if>
+    	    <if test="searchType != null and searchType == 'list'">
+				LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    	    </if>
+	</select>
+	
+<!-- 	RFID 태그 기록 - 태그 목록 건수 -->
+	<select id="selectRfidTagListCnt">
+	    SELECT  
+				count(*)
+			FROM svc_opr_rfid_data 
+			WHERE 1=1
+				AND rfid_no = #{rfidNo}
+ 	        <![CDATA[
+		    	AND tag_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND tag_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+	</select>
+<!-- 	RFID 태그 기록 - 삭제 -->
+	<delete id="deleteOperatorRfidList">
+	    DELETE FROM cmm_oprtr_rfid_info 
+	    WHERE oprtr_id IN
+	    <foreach collection="oprtrIds.split(',')" item="oprtrId" open="(" separator="," close=")">
+		    #{oprtrId}
+		</foreach>
+	</delete>
+</mapper>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.mngr.service.impl.MngrScheduleMapper">
+
+        <!-- 파일 정보 저장 -->
+    <insert id="insertFile" parameterType="map" useGeneratedKeys="true" keyProperty="fileSn">
+        INSERT INTO cmm_vhcl_opr_intvl_hstry_file (
+            org_file_nm,
+            file_nm,
+            file_path,
+            file_sz,
+            file_ext,
+            mbr_id,
+            ownr_nm
+        ) VALUES (
+            #{orgFileNm},
+            #{fileNm},
+            #{filePath},
+            #{fileSz},
+            #{fileExt},
+            #{currentUserId},
+            #{currentOwnrNm}
+        )
+    </insert>
+    
+   	<!-- 	배차일지 관리 - 배차일지 목록 -->
+	<select id="selectScheduleList">
+	    SELECT 
+			file_sn
+			, ifnull(ownr_nm, '') as ownr_nm
+			, mbr_id
+			, org_file_nm
+			, file_sz
+			, file_ext
+			, reg_dt
+		FROM cmm_vhcl_opr_intvl_hstry_file
+		WHERE 1=1
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null
+			</if>
+	    ORDER BY
+	        reg_dt DESC
+		LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	</select>
+	
+	<!-- 	배차일지 관리 - 배차일지 목록 건수 -->
+	<select id="selectScheduleListCnt">
+	    SELECT
+	    	count(*)
+	    FROM
+	        cmm_vhcl_opr_intvl_hstry_file
+	    WHERE 1=1
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null
+			</if>
+	</select>
+	
+	<!-- 	배차일지 관리 - 배차일지 파일 정보 -->
+	<select id="selectScheduleFileInfo">
+	    SELECT 
+	    	file_sn
+	     	, ownr_nm
+	     	, mbr_id
+	     	, org_file_nm
+	     	, file_nm
+	     	, file_path
+	     	, file_sz
+	     	, file_ext
+	     	, reg_dt
+     	 FROM cmm_vhcl_opr_intvl_hstry_file
+	     WHERE file_sn = #{fileSn}
+       	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null
+			</if>
+	</select>
+	
+	<!-- 배차일지 관리 - 배차일지 삭제할 파일 정보 조회 -->
+	<select id="selectScheduleFileInfoList">
+	    SELECT 
+	        file_sn AS fileSn,
+	        org_file_nm AS orgFileNm,
+	        file_nm AS fileName,
+	        file_path AS filePath
+	    FROM cmm_vhcl_opr_intvl_hstry_file 
+	    WHERE file_sn IN
+	    <foreach collection="fileSns" item="fileSn" open="(" separator="," close=")">
+	        #{fileSn}
+	    </foreach>
+	</select>
+	
+	<!-- 배차일지 관리 - 배차일지 파일 정보 삭제 -->
+	<delete id="deleteScheduleFiles">
+	    DELETE FROM cmm_vhcl_opr_intvl_hstry_file 
+	    WHERE file_sn IN
+	    <foreach collection="fileSns" item="fileSn" open="(" separator="," close=")">
+	        #{fileSn}
+	    </foreach>
+	</delete>
+	
+	
+</mapper>

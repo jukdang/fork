@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+	        <div class="contents board">
+		        <div class="wrapper">
+		            <div class="tit_wrap">
+		            	<div class="stit_wrap type02">
+		                	<h1 th:text="${pageInfo.pageTitle}"></h1>
+		                	<em>총 <b>15</b>건</em>
+		                </div>
+		                <!-- 검색 폼과 페이징을 위한 폼 -->
+		                    <input type="hidden" id="pageIndex" name="pageIndex" value="1">
+		                    
+	                   		<div class="top_right_area">
+								<div class="top_select">
+									<label>운수회사</label>
+	                                <div th:replace="/common/ownrSelect :: mngr-select"></div>
+                                    <button type="button" class="btn mid blue" onclick="getDataList();">검색</button>
+	                            </div>
+	                        </div>
+		            </div>
+		            
+		            <div class="board_list">
+
+		                <div class="wh_box">
+		                    <div class="tbl_box scrollBar">
+		                        <table class="tbl02">
+		                            <caption style="visibility:hidden">회원 목록 - 선택, 번호, 아이디, 이름, 이메일, 권한, 관리 표시하는 테이블</caption>
+		                            <thead>
+		                                <tr>
+		                                	<th class="w5p">
+                                                <input type="checkbox" id="selectAll">
+                                            </th>
+		                                    <th class="w10p">No</th>
+		                                    <th class="w20p">운전원 아이디</th>
+		                                    <th class="w26p">운전원명</th>
+		                                    <th class="w20p">RFID 카드 아이디</th>
+		                                </tr>
+		                            </thead>
+		                            <tbody id="dataArea">
+		                            </tbody>
+		                        </table>
+		                    </div>
+		                </div>
+		                
+		                <div class="btn_area jfright">
+		                	<button type="button" class="btn mid bd_red">삭제</button>
+		                    <a class="btn mid scolor" th:href="@{/mngr/rfidOprtrInsertForm}">등록</a>
+		                </div>
+                        
+                        <div class="paging" id="paging">
+                    	</div>
+                    	
+                    	<!-- 삭제, 적용 팝업 -->
+                    	<div class="pop_wrap" id="popWrap" style="display: none;">
+					        <div class="pop_cont pop_layer">
+					            <div class="pop_head">
+					                <span>알림</span>
+					            </div>
+					            <div class="pop_body">
+					                <div class="pop_alert"><h3>삭제 하시겠습니까?</h3></div>
+					                <div class="tac">
+					                    <button id="cancel" class="btn mid grey mr8">취소</button>
+					                    <button id="confirm" class="btn mid blue">확인</button>
+					                </div>
+					            </div>
+					        </div>
+					    </div>
+		                <!-- Paging -->
+		                <div class="paging" id="paging">
+			    		</div>
+		            </div>
+		        </div>
+		    </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+   	<script>
+	$(document).ready(function() {
+		getDataList();
+		$("#searchBtn").on("click", function() {
+			getDataList();
+		});
+		
+   	    // 전체선택 체크박스 이벤트
+   	    $('#selectAll').on('change', function() {
+   	        var isChecked = $(this).is(':checked');
+   	        $('input[name="selectedOprtrId"]').prop('checked', isChecked);
+   	    });
+   	    $(document).on('click', '.clickable', function() {
+   	        var oprtrId = $(this).closest('tr').data('oprtr-id');
+   	     	window.location.href = contextPath + `/mngr/rfidOprtrUpdateForm?oprtrId=${oprtrId}`;
+   	    });
+
+   	    // 삭제 버튼 클릭 이벤트
+   	    $('.btn.bd_red').on('click', function(e) {
+   	        e.preventDefault();
+   	        var checkedItems = $('input[name="selectedOprtrId"]:checked');
+   	        if(checkedItems.length === 0) {
+   	            alert('삭제할 항목을 선택해주세요.');
+   	            return;
+   	        }
+   	        $('#popWrap').show();
+   	    });
+
+   	    // 삭제 확인 버튼
+   	    $('#confirm').on('click', function() {
+   	        deleteSelectedFiles();
+   	        $('#popWrap').hide();
+   	    });
+
+   	    // 삭제 취소 버튼
+   	    $('#cancel').on('click', function() {
+   	        $('#popWrap').hide();
+   	    });
+   	});
+	
+	function getDataList(pageIndex = 1){
+	    var ownrNm = $("#ownrSelect").val();
+	    customFetch({
+	        url: '/mngr/getOperatorRfidList',
+	        method: 'POST',
+	        params: {
+	        	ownrNm : ownrNm,
+	        	pageIndex : pageIndex
+	        },
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	        	console.log(response)
+	            var html = '';
+	            if (response && response.data && response.data.list) {
+		            var list = response.data.list;
+		            const paginationInfo = response.data.paginationInfo
+		            if(list.length > 0){
+		            	list.forEach(function(item, index) {
+			            	const rowNumber = (paginationInfo.totalRecordCount || 0) - 
+	                        ((paginationInfo.currentPageNo - 1) * (paginationInfo.recordCountPerPage || 10)) - index;
+			            	html += `<tr tabindex="0" data-oprtr-id="${item.oprtrId}">
+					            		<td class="listtd checkbox-td">
+					            			<input type="checkbox" name="selectedOprtrId" value="${item.oprtrId}">
+					            		</td>
+					            		<td class="clickable">${rowNumber}</td>
+					            		<td class="clickable">${item.oprtrId}</td>
+					            		<td class="clickable">${item.oprtrNm}</td>
+					            		<td class="clickable">${item.rfidNo}</td>
+			            		</tr>`;
+			            	if (typeof setPagination === 'function') {
+		                        setPagination('paging', 'getDataList', response.data.paginationInfo);
+		                    }
+		            	});
+						$("#dataArea").html(html);
+		            }else{
+		            	html += `<tr>
+									<td colspan="4">조회결과가 없습니다.</td>
+								</tr>`;
+		            	$("#dataArea").html(html);
+		            	setPagination('paging', 'getDataList', response.data.paginationInfo);
+		            }
+	            }
+	        },
+	        onError: (error) => console.error('에러:', error)
+	    });
+	}
+	
+   	function deleteSelectedFiles() {
+   		var selectedOprtrIds = [];
+   	    $('input[name="selectedOprtrId"]:checked').each(function() {
+   	    	selectedOprtrIds.push($(this).val());
+   	    });
+   		
+   	    customFetch({
+   	        url: '/mngr/deleteOperatorRfidList',
+   	        method: 'POST',
+   	        params: {
+   	        	oprtrIds: selectedOprtrIds
+   	        },
+   	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+   	        onSuccess: (response) => {
+   	            alert('삭제가 완료되었습니다.');
+   	            getDataList();
+   	        },
+   	        onError: (error) => {
+   	            alert('삭제 중 오류가 발생했습니다.');
+   	            console.error('에러:', error);
+   	        }
+   	    });
+   	}
+	
+	</script>
+</body>
+</html>

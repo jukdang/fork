@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<!-- Handsontable CSS -->
+<!-- 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.0.0/dist/handsontable.full.min.css"> -->
+    <link rel="stylesheet" type="text/css" th:href="@{/js/egovframework/handsontable/handsontable.full.min.css}">
+	<!-- SheetJS for Excel reading -->
+<!-- 	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> -->
+    <script th:src="@{/js/egovframework/handsontable/handsontable.full.min.js}"></script>
+	<!-- Handsontable JS -->
+<!-- 	<script src="https://cdn.jsdelivr.net/npm/handsontable@14.0.0/dist/handsontable.full.min.js"></script> -->
+    <script th:src="@{/js/egovframework/sheet/xlsx.full.min.js}"></script>
+	
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <div class="tit_wrap">
+                		<h1 th:text="${pageInfo.pageTitle}">파일 업로드</h1>
+                		<a class="btn sm scolor" id="downloadTemplate">양식 다운로드</a>
+	                </div>
+	                
+	                <!-- 파일 업로드 영역 -->
+	                <div class="wh_box file_drop_box">
+		                <div class="drop_area" id="drop-area">
+		                	<div class="drop_area_inner">
+				                <p>파일을 여기에 끌어다 놓거나, 클릭하여 선택하세요.</p>
+				                <em>csv,xls,xlsx 파일 형식을 지원합니다.</em>
+			                </div>
+			                <button type="button" class="grey btn mid" id="fileSelectBtn">파일 선택</button>
+			                <input type="file" id="fileInput" accept=".csv,.xls,.xlsx" style="display: none;">
+			            </div>
+			            
+			            <!-- 업로드된 파일 목록 -->
+			            <div class="file_detail_form" id="fileListTable" style="display: none;">
+                        </div>
+		            </div>
+		            
+		            <!-- 파일 미리보기 영역 -->
+		            <div class="wh_box file_preview_section" id="previewSection" style="display: none;">
+		            	<div class="file-info" id="fileInfo"></div>
+		            	<div class="stit_wrap type02">
+		                	<h2 class="preview_title">파일 미리보기</h2>
+		                </div>
+		            	<div id="preview-container"></div>
+		            </div>
+		            
+	            </div>
+	            
+	            <div class="btn_area jfcenter">
+                	<button class="btn mid mcolor" id="svBtn" type="button">등록</button>
+                </div>
+	            
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+
+<script>
+let uploadedFiles = [];
+let handsontableInstance = null;
+
+// 템플릿 정의 (양식과 비교할 기준)
+const TEMPLATE_HEADERS = ['번호', '자동차등록번호', '운전자이름', '근무시작일자', '근무시작시간', '근무종료일자', '근무종료시간'];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('fileInput');
+    const fileSelectBtn = document.getElementById('fileSelectBtn');
+    const fileListTable = document.getElementById('fileListTable');
+    const previewSection = document.getElementById('previewSection');
+    const downloadTemplate = document.getElementById('downloadTemplate');
+    const svBtn = document.getElementById('svBtn');
+    
+    // 파일 선택 버튼 클릭
+    fileSelectBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    // 드래그 앤 드롭 영역 클릭
+    dropArea.addEventListener('click', (e) => {
+        if (e.target === dropArea || e.target.closest('.drop_area_inner')) {
+            fileInput.click();
+        }
+    });
+    
+    // 드래그 앤 드롭 이벤트
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+    });
+    
+    dropArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+    });
+    
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+    
+    // 파일 입력 변경
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    // 양식 다운로드
+    downloadTemplate.addEventListener('click', (e) => {
+        e.preventDefault();
+        downloadExcelTemplate();
+    });
+    
+    // 등록 버튼
+    svBtn.addEventListener('click', () => {
+        if (uploadedFiles.length === 0) {
+            alert('업로드할 파일을 선택해주세요.');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', uploadedFiles[0]);
+        
+        fetch(contextPath+'/mngr/uploadFile', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                clearAllFiles(); // 등록 성공 후 초기화
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('파일 등록 중 오류가 발생했습니다.');
+            console.error('Error:', error);
+        });
+    });
+    
+    function handleFiles(files) {
+        // 기존 파일이 있으면 먼저 제거
+        if (uploadedFiles.length > 0) {
+            clearAllFiles();
+        }
+        
+        // 첫 번째 파일만 처리
+        const file = files[0];
+        if (isValidFileType(file)) {
+            uploadedFiles.push(file);
+            addFileToList(file);
+            if (file.name.match(/\.(xlsx|xls)$/i)) {
+                readExcelFile(file);
+            }
+        } else {
+            alert(`지원하지 않는 파일 형식입니다: ${file.name}`);
+        }
+    }
+    
+    function isValidFileType(file) {
+        const validTypes = ['.csv', '.xls', '.xlsx'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        return validTypes.includes(fileExtension);
+    }
+    
+    function addFileToList(file) {
+        fileListTable.style.display = 'block';
+        
+        const fileItem = document.createElement('p');
+        fileItem.innerHTML = `
+        	<i class="fa-solid fa-paperclip"></i><a>${file.name}</a><button type="button" onclick="removeFile('${file.name}')"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        
+        fileListTable.appendChild(fileItem);
+    }
+    
+    function readExcelFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // 첫 번째 시트 읽기
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                header: 1,
+                defval: ''
+            });
+            
+            displayPreview(jsonData, file);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    // 양식과 데이터를 비교하여 오류 셀을 찾는 함수
+    function validateData(data) {
+        const errors = [];
+        
+        if (data.length === 0) {
+            return errors;
+        }
+        
+        // 헤더 검증
+        const fileHeaders = data[0];
+        for (let col = 0; col < TEMPLATE_HEADERS.length; col++) {
+            if (!fileHeaders[col] || fileHeaders[col].toString().trim() !== TEMPLATE_HEADERS[col]) {
+                errors.push({ row: 0, col: col, type: 'header' });
+            }
+        }
+        
+        // 데이터 검증
+        for (let row = 1; row < data.length; row++) {
+            const rowData = data[row];
+            
+            for (let col = 0; col < TEMPLATE_HEADERS.length; col++) {
+                const cellValue = rowData[col];
+                const header = TEMPLATE_HEADERS[col];
+                
+                // 각 컬럼별 검증 로직
+                if (validateCell(cellValue, header, row, col)) {
+                    errors.push({ row: row, col: col, type: 'data' });
+                }
+            }
+        }
+        
+        return errors;
+    }
+    
+    // 개별 셀 검증 함수
+    function validateCell(value, header, row, col) {
+        if (!value && value !== 0) {
+            return true; // 빈 값
+        }
+        
+        const strValue = value.toString().trim();
+        
+        switch (header) {
+            case '번호':
+                return isNaN(strValue) || parseInt(strValue) <= 0;
+            
+            case '자동차등록번호':
+                // 자동차 등록번호 패턴 검증 (예: 경남11아1111)
+                const carNumPattern = /^[가-힣]{2}\d{2}[가-힣]\d{4}$/;
+                return !carNumPattern.test(strValue.replace(/\s/g, ''));
+            
+            case '운전자이름':
+                // 한글 이름 패턴 검증
+                const namePattern = /^[가-힣]{2,5}$/;
+                return !namePattern.test(strValue);
+            
+            case '근무시작일자':
+            case '근무종료일자':
+                // 날짜 형식 검증 (YYYYMMDD)
+                const datePattern = /^\d{8}$/;
+                if (!datePattern.test(strValue)) return true;
+                
+                const year = parseInt(strValue.substring(0, 4));
+                const month = parseInt(strValue.substring(4, 6));
+                const day = parseInt(strValue.substring(6, 8));
+                
+                return year < 2020 || year > 2030 || month < 1 || month > 12 || day < 1 || day > 31;
+            
+            case '근무시작시간':
+            case '근무종료시간':
+                // 시간 형식 검증 (HH:MM)
+                const timePattern = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+                return !timePattern.test(strValue);
+            
+            default:
+                return false;
+        }
+    }
+    
+    function displayPreview(data, file) {
+        if (data.length === 0) {
+            alert('파일에 데이터가 없습니다.');
+            return;
+        }
+        
+        previewSection.style.display = 'block';
+        
+        // 데이터 검증
+        const errors = validateData(data);
+        
+        // 기존 Handsontable 인스턴스 제거
+        if (handsontableInstance) {
+            handsontableInstance.destroy();
+        }
+        
+        const container = document.getElementById('preview-container');
+        container.innerHTML = '';
+        
+        // Handsontable 초기화
+        handsontableInstance = new Handsontable(container, {
+            data: data,
+            rowHeaders: true,
+            colHeaders: false,
+            width: '100%',
+            height: 380,
+            licenseKey: 'non-commercial-and-evaluation',
+            readOnly: true,
+            stretchH: 'all',
+            manualColumnResize: true,
+            manualRowResize: true,
+            contextMenu: true,
+            copyPaste: true,
+            cells: function(row, col) {
+                const cellProperties = {};
+                
+                // 오류 셀 찾기
+                const hasError = errors.some(error => error.row === row && error.col === col);
+                
+                // 첫 번째 행을 헤더로 스타일링
+                if (row === 0) {
+                    cellProperties.className = 'htCenter htMiddle';
+                    cellProperties.renderer = function(instance, td, row, col, prop, value, cellProperties) {
+                        Handsontable.renderers.TextRenderer.apply(this, arguments);
+                        td.style.backgroundColor = hasError ? '#ffeef0' : '#f8f9fa';
+                        td.style.fontWeight = '500';
+                        td.style.borderBottom = '1px solid #ccc';
+                        
+                        if (hasError) {
+                            td.style.color = '#bf4444';
+                            td.style.border = '1px solid #de9791';
+                            td.title = '헤더가 양식과 일치하지 않습니다.';
+                        }
+                    };
+                } else {
+                    // 데이터 행
+                    if (hasError) {
+                        cellProperties.renderer = function(instance, td, row, col, prop, value, cellProperties) {
+                            Handsontable.renderers.TextRenderer.apply(this, arguments);
+                            td.style.backgroundColor = '#ffeef0';
+                            td.style.color = '#bf4444';
+                            td.style.border = '1px solid #de9791';
+                            td.title = '데이터 형식이 올바르지 않습니다.';
+                        };
+                    }
+                }
+                
+                return cellProperties;
+            }
+        });
+        
+        // 오류 개수 표시
+        if (errors.length > 0) {
+            const errorInfo = document.createElement('div');
+            errorInfo.className = 'error-info';
+            errorInfo.style.cssText = '';
+            errorInfo.innerHTML = `⚠️ <b>${errors.length}</b>개의 오류가 발견되었습니다. 빨간색으로 표시된 셀을 확인해주세요.`;
+            container.parentNode.insertBefore(errorInfo, container);
+        }
+    }
+    
+    function downloadExcelTemplate() {
+        // 템플릿 데이터 생성
+        const templateData = [
+            TEMPLATE_HEADERS,
+            [1, '경남11아1111', '홍장군', '20240601', '06:41', '20240601', '07:04'],
+            [2, '경남22아2222', '신장군', '20240601', '07:23', '20240601', '08:53']
+        ];
+        
+        // 워크북 생성
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        
+        // 열 너비 설정
+        ws['!cols'] = [
+            { width: 10 },  // 번호
+            { width: 15 },  // 자동차등록번호
+            { width: 12 },  // 운전자이름
+            { width: 12 },  // 근무시작일자
+            { width: 12 },  // 근무시작시간
+            { width: 12 },  // 근무종료일자
+            { width: 12 }   // 근무종료시간
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, '운전자정보');
+        
+        // 파일 다운로드
+        XLSX.writeFile(wb, '운전자정보_양식.xlsx');
+    }
+    
+    // 모든 파일 및 오류 정보 초기화 함수
+    function clearAllFiles() {
+        uploadedFiles = [];
+        fileListTable.innerHTML = '';
+        fileListTable.style.display = 'none';
+        previewSection.style.display = 'none';
+        
+        // 오류 메시지 제거
+        const errorInfo = document.querySelector('.error-info');
+        if (errorInfo) {
+            errorInfo.remove();
+        }
+        
+        // Handsontable 인스턴스 제거
+        if (handsontableInstance) {
+            handsontableInstance.destroy();
+            handsontableInstance = null;
+        }
+        
+        // 파일 input 초기화
+        fileInput.value = '';
+    }
+    
+    // 전역 함수로 파일 제거
+    window.removeFile = function(fileName) {
+        clearAllFiles();
+    };
+});
+</script>
+   
+</body>
+</html>

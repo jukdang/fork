@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <h1 th:text="${pageInfo.pageTitle}"></h1>
+	            </div>
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+   
+</body>
+</html>

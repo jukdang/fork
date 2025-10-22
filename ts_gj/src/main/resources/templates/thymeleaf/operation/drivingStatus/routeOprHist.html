@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/js/egovframework/leaflet/leaflet.css}">
+	<script th:src="@{/js/egovframework/leaflet/leaflet.js}"></script>
+	<script th:src="@{/js/egovframework/common.js}"></script>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+	<script th:src="@{/js/egovframework/dashboard/gwangju.js}"></script>
+	<script th:src="@{/js/egovframework/design.js}"></script>
+</head>
+<style>
+.leaflet-popup-close-button {
+	padding-left: 13px;   /* 기본값은 0px에 가까움 → 여백 조금 줌 */
+}
+</style>
+<body>
+<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		    
+		    	<!-- 팝업 -->
+		    	
+	    		<div class="popup_dim"></div>
+		    	<div class="popup_wrap">
+					<div class="popup_header">
+						<span>개별 회차에 대한 정보</span>
+						<button class="popup_close" title="닫기" onclick="closePopup();"><i class="fa-solid fa-xmark"></i></button>
+					</div>
+					<div class="popup_body">
+						<div class="popup_list">
+							<dl>
+								<dt>차량번호</dt>
+								<dd id="regNo"></dd>
+							</dl>
+							<dl>
+								<dt>노선</dt>
+								<dd id="rteNm"></dd>
+							</dl>
+						</div>
+						<div class="tbl_box">
+				    		<table class="tbl01 popup_route_tbl">
+				    			<thead>
+									<tr>
+										<th><span>일자</span></th>
+										<th><span>주행거리<em>(km)</em></span></th>
+										<th><span>탄소배출<em>(kg)</em></span></th>
+										<th><span>연비<em>(km/m³) / </em></span><span>전비<em>(km/kwh)</em></span></th>
+									</tr>
+								</thead>
+								<tbody id="routeHistDetailList">
+								</tbody>
+				    		</table>
+				    	</div>
+					</div>
+				</div>
+		    	
+		    
+				<div class="gis_container">
+				    <!-- 왼쪽 사이드바 -->
+				    <aside class="gis_sidebar">
+
+				    	<ul class="gis_tab">
+				    		<li class="on"><button>노선 운행 현황</button></li>
+				    		<li><button th:onclick="|location.href='@{/operation/dangerOprHist}'|">위험 운행 지도</button></li>
+				    	</ul>
+
+				    	<div class="gis_sidebar_inner">
+				    		<!-- 노선 운행 현황 -->
+				    		<div class="gis_tab_content01">
+						    	<div class="gis_filter_wrap">
+							    	<div class="gis_filter">
+				    					<!-- 소유자 선택 -->
+							    		<div th:replace="/common/ownrSelect :: operation-status-ownr-select"></div>
+							    		<div>
+							    			<label for="rteSelect">노선</label>
+							    			<select name="rteSelect" id="rteSelect">
+							    				<option th:each="rte : ${rteList.list}" 
+										                th:value="${rte.rteId}" 
+										                th:text="${rte.rteNm}">
+										        </option>
+							    			</select>
+							    		</div>
+							    		<div>
+							    			<label>기간</label>
+							    			<span class="date_box">
+							    				<!-- 스크린 리더용 라벨 -->
+								    			<label for="startDate" class="sr-only">시작일</label>
+												<input type="date" id="startDate">
+												<em>~</em>
+												<!-- 스크린 리더용 라벨 -->
+												<label for="endDate" class="sr-only">종료일</label>
+												<input type="date" id="endDate">
+											</span>
+							    		</div>
+							    	</div>
+							    	<button class="btn lg black" title="조회" onclick="getRouteHistList(1, true);">조회</button>
+							    </div>
+							    
+							    <div class="route_operation scrollBar" id="route_operation">
+							    	<div class="total_databox">
+							    		<dl>
+							    			<dt>운행횟수</dt>
+							    			<dd><b id="totalOprCnt">0</b><em>회</em></dd>
+							    		</dl>
+							    		<dl>
+							    			<dt>주행거리</dt>
+							    			<dd><b id="sumOprDstnc">0</b><em>km</em></dd>
+							    		</dl>
+							    		<dl>
+							    			<dt>평균 연비</dt>
+							    			<dd><b id="fuelEcnm_FU06">0</b><em>km/m³</em></dd>
+							    		</dl>
+							    		<dl>
+							    			<dt>평균 전비</dt>
+							    			<dd><b id="fuelEcnm_FU04">0</b><em>km/kWh</em></dd>
+							    		</dl>
+							    		<dl>
+							    			<dt>평균 수소전비</dt>
+							    			<dd><b id="fuelEcnm_FU05">0</b><em>km/kWh</em></dd>
+							    		</dl>
+							    		<dl>
+							    			<dt>탄소배출량</dt>
+							    			<dd><b id="sumCbTon">0</b><em>t</em></dd>
+							    		</dl>
+							    	</div>
+								    
+								    
+							    	<div class="tbl_box">
+							    		<table class="tbl01">
+							    			<thead>
+												<tr>
+													<th><span>차량번호</span></th>
+													<th><span>주행거리<em>(km)</em></span></th>
+													<th><span>탄소배출<em>(kg)</em></span></th>
+													<th class="w24p"><span>연비<em>(km/m³) /</em></span><span>전비<em>(km/kwh)</em></span></th>
+													<th class="w20p"><span>상세보기</span></th>
+												</tr>
+											</thead>
+											<tbody id="routeHistList">
+												<!-- <tr>
+													<td>123자5678</td>
+													<td>302.02</td>
+													<td>175.73</td>
+													<td>4.6</td>
+													<td><button class="btn grey sm">상세운행</button></td>
+												</tr>
+												<tr>
+													<td>123자5678</td>
+													<td>302.02</td>
+													<td>175.73</td>
+													<td>4.6</td>
+													<td><button class="btn grey sm">상세운행</button></td>
+												</tr>
+												<tr>
+													<td>123자5678</td>
+													<td>302.02</td>
+													<td>175.73</td>
+													<td>4.6</td>
+													<td><button class="btn grey sm">상세운행</button></td>
+												</tr>
+												<tr>
+													<td>123자5678</td>
+													<td>302.02</td>
+													<td>175.73</td>
+													<td>4.6</td>
+													<td><button class="btn grey sm">상세운행</button></td>
+												</tr>
+												<tr>
+													<td>123자5678</td>
+													<td>302.02</td>
+													<td>175.73</td>
+													<td>4.6</td>
+													<td><button class="btn grey sm">상세운행</button></td>
+												</tr> -->
+											</tbody>
+							    		</table>
+							    	</div>
+					            	<div class="paging" id="paging">
+						    			<!-- <span class="num">
+							    			<a href="#" class="first disable"><i class="fa fa-angle-double-left"></i></a>
+							    			<a href="#" class="pre disable"><i class="fa fa-angle-left"></i></a>
+							    			<span class="num">
+								    			<a class="pageNoClass on">1</a>
+								    			<a class="pageNoClass">2</a>
+								    			<a class="pageNoClass">3</a>
+								    			<a class="pageNoClass">4</a>
+							    			</span>
+							    			<a href="#" class="next disable"><i class="fa fa-angle-right"></i></a>
+							    			<a href="#" class="last"><i class="fa fa-angle-double-right"></i></a>
+						    			</span> -->
+							    	</div>
+						    	</div>
+						    	
+					    	</div>
+				    	</div>
+				    </aside>
+				    <a title="닫기" href="#" class="btn_hide"><i class="fa-solid fa-angle-left"></i></a>
+				
+				    <!-- 지도 영역 -->
+				    <div class="map_area" id="map_div">
+				    	<!-- <i class="bus_marker_icon"><img th:src="@{/images/egovframework/bus_icon_g.png}"></i>
+				    	<i class="bus_marker_icon"><img th:src="@{/images/egovframework/bus_icon_r.png}"></i>
+				    	<i class="bus_stop_icon"></i> -->
+				    </div>
+				</div>
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+	    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	//defaultDate setting
+	let defaultStartDate = dayjs().subtract(8, "day").format("YYYY-MM-DD");
+	let defaultEndDate = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+	$("#startDate").attr("max", defaultEndDate);
+	$("#endDate").attr("max", defaultEndDate);
+	$("#startDate").val(defaultStartDate);
+	$("#endDate").val(defaultEndDate);
+	/* ---------------------------------- leafLet Start ---------------------------------- */
+	const defaultZoomLevel = 11;
+	//Leaflet map initialization
+	let map = L.map('map_div',{
+		minZoom: 7, // 최소 확대 수준
+	    maxZoom: 18, // 최대 확대 수준
+	    maxBounds: L.latLngBounds(L.latLng(33.0, 124.0), L.latLng(39.0, 132.0)) // 한반도 지역의 경계를 벗어나지 못하도록 설정
+	}).setView([35.15, 126.852601], defaultZoomLevel); // Set center and zoom level
+	
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	}).addTo(map);
+	
+	//✅ GeoJSON 데이터 지도에 추가
+	const gjLayer = L.geoJSON(window.am5geodata_gwngjuLow, {
+	    style: function(feature) {
+	        return {
+	            color: "red",     // 외곽선 색상
+	            weight: 1,        // 두께
+	            opacity: 0,     // 선 투명도
+	            fillColor: "red",// 채우기 색상
+	            fillOpacity: 0.09  // 채우기 투명도
+	        };
+	    },
+	    onEachFeature: function(feature, layer) {
+	        // 마우스 오버 팝업 예시
+	        if (feature.properties && feature.properties.NAME) {
+	//             layer.bindPopup(feature.properties.NAME);
+	        }
+	    }
+	}).addTo(map);
+	
+	// GeoJSON 영역으로 지도 줌 조정
+	map.fitBounds(gjLayer.getBounds());
+	/* ---------------------------------- leafLet End ---------------------------------- */
+	
+	let searchParam = {};
+	
+	//출발 아이콘
+	const startIcon = L.icon({
+	  iconUrl: contextPath + '/images/egovframework/bus_icon_g.png', // 출발 이미지
+	  iconSize: [36, 41.89],   // 아이콘 크기 (필요시 조정)
+	  iconAnchor: [16, 32], // 지도 위에서 아이콘이 찍히는 좌표 (중심/하단 맞춤)
+	  popupAnchor: [0, -32] // 팝업 위치
+	});
+	
+	//종점 아이콘
+	const endIcon = L.icon({
+	  iconUrl: contextPath + '/images/egovframework/bus_icon_r.png', // 종점 이미지
+	  iconSize: [36, 41.89],
+	  iconAnchor: [16, 32],
+	  popupAnchor: [0, -32]
+	});
+	
+	$(function() {
+	    $('#ownrSelect').on('change', function() {
+	        getRteList();
+	    });
+		getRouteHistList(1, true);
+	})
+	
+	//운수사별 노선 목록 조회
+	function getRteList() {
+		
+        const $list = $('#rteSelect');
+		
+		$list.empty();
+		
+		const params = {
+			ownrNm: $("#ownrSelect").val()
+	    };
+		
+	    customFetch({
+	        url: '/operation/getRteList',
+	        method: 'POST',
+	        params: params,
+	        loadingId: '',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getRteList 조회 성공:', response);
+				
+				if(response.code == 200) {
+					
+					var html = '';
+					
+					if (response && response.data && response.data.list) {
+					    var data = response.data.list;
+					    if(data.length > 0){
+					    	
+					    	for(const item of data){
+					    	
+					    		html += `<option value="${item.rteId}">${item.rteNm}</option>`;
+					    		
+					    	}
+					    }else{
+					    	html += `<option value="">선택</option>`;
+					    }
+				    	$list.html(html);
+					}
+			     
+				}
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	    
+	}
+	
+	//노선 운행 목록 조회
+	function getRouteHistList(pageIndex = 1, isButtonClick = false) {
+		
+		$("#routeHistList").empty();
+		
+		const params = {
+			ownrNm: $("#ownrSelect").val(),
+			rteId: $("#rteSelect").val(),
+			rteNm: $("#rteSelect :selected").text(),
+			startDate: $("#startDate").val(),
+			endDate: $("#endDate").val(),
+			pageIndex: pageIndex
+	    };
+		
+		searchParam = params;
+		
+	    customFetch({
+	        url: '/operation/getRouteHistList',
+	        method: 'POST',
+	        params: params,
+	        loadingId: 'route_operation',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getRouteHistList 조회 성공:', response);
+	            //console.log('coord :', response.data.coord[0]);
+	            // 버튼 클릭 시에만 지도 표시
+	            if (isButtonClick && response.data.coord && response.data.coord.length > 0) {
+	                setRouteOnMap(response.data.coord[0]);
+	            }
+	            setRouteHistList(response);
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	    
+	}
+	
+	//지도 위 노선
+	function setRouteOnMap(coord) {
+		
+		resetMap();
+		
+	    if (!coord.rtePath) return;
+	
+		toggleLoading("map_div", true);
+	
+	    let coords;
+	    try {
+	        coords = JSON.parse(coord.rtePath); // 문자열 → 배열 변환
+	    } catch (e) {
+	        console.error("좌표 파싱 실패:", e);
+	        return;
+	    }
+	
+	    if (!Array.isArray(coords) || coords.length === 0) return;
+	
+	    // [lng, lat] → [lat, lng]
+	    const latlngs = coords.map(c => [c[1], c[0]]);
+	
+	    // 폴리라인 생성
+	    window.currentRoute = L.polyline(latlngs, {
+	        color: 'red',
+	        weight: 4,
+	        opacity: 0.7
+	    }).addTo(map);
+		let dppl = [coord.dpplLat, coord.dpplLng];
+		let arvl = [coord.arvlLat, coord.arvlLng];
+		
+	    // 출발 마커
+		window.startMarker = L.marker(dppl, { icon: startIcon })
+		    .addTo(map)
+		    .bindPopup(`출발지`);
+		
+		// 도착 마커
+		window.endMarker = L.marker(arvl, { icon: endIcon })
+		    .addTo(map)
+		    .bindPopup(`도착지`);
+	
+	    // 경로에 맞게 지도 이동/줌 조정
+	    map.fitBounds(window.currentRoute.getBounds());
+	    
+	    requestAnimationFrame(() => {
+	        setTimeout(() => {
+	            toggleLoading("map_div", false);
+	        }, 500);
+	    });
+		
+	}
+	
+	//지도 초기화
+	function resetMap() {
+	
+	  // 기존 폴리라인 제거
+	  if (window.currentRoute) {
+	      map.removeLayer(window.currentRoute);
+	      window.currentRoute = null;
+	  }
+	
+	  // 이전 마커 제거
+	  if (window.startMarker) {
+	      map.removeLayer(window.startMarker);
+	      window.startMarker = null;
+	  }
+	  
+	  if (window.endMarker) {
+	      map.removeLayer(window.endMarker);
+	      window.endMarker = null;
+	  }
+	  
+	  map.setView([35.15, 126.852601], defaultZoomLevel); // Set center and zoom level
+	}
+	
+	//노선 운행 목록 조회 콜백함수
+	function setRouteHistList(response) {
+		
+		const $list = $('#routeHistList');
+		
+		$list.empty();
+		
+		if(response.code == 200) {
+			
+			let statistics = response.data.statistics;
+			
+			if(statistics.length > 0) {
+				
+				let data = response.data.statistics[0];
+				
+				$("#totalOprCnt").text(formatNumber(data.totalOprCnt));
+				$("#sumOprDstnc").text(formatNumber(data.sumOprDstnc));
+				$("#fuelEcnm_FU06").text(formatNumber(data.fuelEcnmFu06));
+				$("#fuelEcnm_FU04").text(formatNumber(data.fuelEcnmFu04));
+				$("#fuelEcnm_FU05").text(formatNumber(data.fuelEcnmFu05));
+				$("#sumCbTon").text(formatNumber(data.sumCbTon));
+			}else {
+	
+				$("#totalOprCnt").text(0);
+				$("#sumOprDstnc").text(0);
+				$("#fuelEcnm_FU06").text(0);
+				$("#fuelEcnm_FU04").text(0);
+				$("#fuelEcnm_FU05").text(0);
+				$("#sumCbTon").text(0);
+			}
+			
+			var html = '';
+			
+			if (response && response.data && response.data.list) {
+			    var data = response.data.list;
+			    if(data.length > 0){
+			    	
+			    	for(const item of data){
+			    		
+			    		let sumOprDstnc = formatNumber(item.sumOprDstnc);
+			    		let sumCbKg = formatNumber(item.sumCbKg);
+			    		let fuelEcnm = formatNumber(item.fuelEcnm);
+			    	
+			    		html += `<tr>
+									<td>${vhclMasked(item.regNo)}</td>
+									<td>${sumOprDstnc}</td>
+									<td>${sumCbKg}</td>
+									<td>${fuelEcnm}</td>
+									<td><button class="btn grey sm" onclick="getRouteHistDetailList('${item.regNo}');">상세운행</button></td>
+								</tr>`;
+			    		
+			    	}
+			    	$list.html(html);
+			    	if (typeof setPagination === 'function') {
+			            setPagination('paging', 'getRouteHistList', response.data.paginationInfo);
+			        }
+			    }else{
+			    	html += `<tr>
+			        	    	<td colspan="5">데이터가 없습니다.</td>
+			        		</tr>`;
+			    	$list.html(html);
+			    	setPagination('paging', 'getRouteHistList', response.data.paginationInfo);
+			    }
+			}
+	     
+		}
+		
+	}
+	
+	//노선 운행 상세 목록 조회
+	function getRouteHistDetailList(regNo) {
+		
+		const params = {
+			ownrNm: $("#ownrSelect").val(),
+			rteId: $("#rteSelect").val(),
+			regNo: regNo,
+			startDate: searchParam.startDate,
+			endDate: searchParam.endDate
+	    };
+		
+	    customFetch({
+	        url: '/operation/getRouteHistDetailList',
+	        method: 'POST',
+	        params: params,
+	        loadingId: '',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getRouteHistDetailList 조회 성공:', response);
+	            setRouteHistDetailList(response, regNo);
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	}
+	
+	//노선 운행 상세 목록 조회
+	function setRouteHistDetailList(response, regNo) {
+		
+		const $list = $('#routeHistDetailList');
+		
+		$list.empty();
+		
+		if(response.code == 200) {
+			
+			var html = '';
+			
+			if (response && response.data && response.data.list) {
+			    var data = response.data.list;
+			    if(data.length > 0){
+			    	
+			    	for(const item of data){
+			    		
+			    		let oprDstnc = formatNumber(item.oprDstnc);
+			    		let cb = formatNumber(item.cb);
+			    		let fuelEcnm = formatNumber(item.fuelEcnm);
+			    		
+			    		html += `<tr>
+									<td>${item.frstDt} ~ ${item.lastDt}</td>
+									<td>${oprDstnc}</td>
+									<td>${cb}</td>
+									<td>${fuelEcnm}</td>
+								</tr>`;
+			    		
+			    	}
+			    	$list.html(html);
+			    }else{
+			    	html += `<tr>
+			        	    	<td colspan="4">데이터가 없습니다.</td>
+			        		</tr>`;
+			    	$list.html(html);
+			    }
+			}
+	     
+		}
+		$("#regNo").text(vhclMasked(regNo));
+		$("#rteNm").text(searchParam.rteNm);
+		showPopup();
+	}
+	
+	//팝업 표시
+	function showPopup() {
+	
+		$(".popup_wrap").show();
+		$(".popup_dim").show();
+	}
+	
+	//팝업 닫기
+	function closePopup() {
+		
+		$("#regNo").text("");
+		$("#rteNm").text("");
+		$('#routeHistDetailList').empty();
+		
+		$(".popup_wrap").hide();
+		$(".popup_dim").hide();
+	}
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <div class="tit_wrap">
+	                	<h1 th:text="${pageInfo.pageTitle}"></h1>
+	                </div>
+	                
+	                <div class="filter_section">
+		                <div class="wh_box filter_area">
+	                		<div class="filter_wrap">
+								<div class="top_date">
+								    <label>기간</label>
+									<input type="date" id="startDt">
+							        <em>~</em>
+							        <input type="date" id="endDt">
+								</div>
+								<script>
+							        // 오늘 날짜
+							        const today = dayjs();
+							        // 7일 후 날짜 계산
+							        const sevenDaysLater = today.add(-7, 'day');
+							        
+							        // 기본값 설정 (YYYY-MM-DD 형식)
+							        document.getElementById('startDt').value = sevenDaysLater.format('YYYY-MM-DD');
+							        document.getElementById('endDt').value = today.format('YYYY-MM-DD');
+							        document.getElementById('endDt').max = today.format('YYYY-MM-DD');
+							    </script>
+								<div class="top_select">
+									<label>운수회사</label>
+									<div th:replace="/common/ownrSelect :: mngr-select"></div>
+                                    <button type="button" class="btn mid blue" id="searchBtn">검색</button>
+	                            </div>
+							</div>
+	                	</div>
+                	</div>
+                	
+                	<section class="tbl_section">
+                		<div class="col01">
+		                	<div class="wh_box">
+			               		<div class="stit_wrap type02">
+				                	<h2>AI 리포트 알림</h2>
+				                	<em>총 <b id="rptTotalCnt"></b>건</em>
+				                </div>
+				                <div class="tbl_box scrollBar">
+			                        <table class="tbl02 none_hover">
+			                            <thead>
+			                                <tr>
+			                                    <th class="w8p">No</th>
+			                                    <th>운수회사</th>
+			                                    <th>전화번호</th>
+			                                    <th>알림 일시</th>
+			                                    <th>알림 내용</th>
+			                                </tr>
+			                            </thead>
+			                            <tbody id="rptDataArea">
+			                            </tbody>
+			                        </table>
+			                    </div>
+			                    <div class="paging" id="rptPaging">
+			                   	</div>
+			               	</div>
+			               	
+			               	<div class="wh_box">
+			               		<div class="stit_wrap type02">
+				                	<h2>차량 진단 알림</h2>
+				                	<em>총 <b id="chckTotalCnt"></b>건</em>
+				                </div>
+				                <div class="tbl_box scrollBar">
+			                        <table class="tbl02 none_hover">
+			                            <thead>
+			                                <tr>
+			                                    <th class="w8p">No</th>
+			                                    <th>운수회사</th>
+			                                    <th>전화번호</th>
+			                                    <th>알림 일시</th>
+			                                    <th>알림 내용</th>
+			                                </tr>
+			                            </thead>
+			                            <tbody id="chckDataArea">
+			                            </tbody>
+			                        </table>
+			                    </div>
+			                    <div class="paging" id="chckPaging">
+			                   	</div>
+			               	</div>
+			               	
+			               	<div class="wh_box">
+			               		<div class="stit_wrap type02">
+				                	<h2>RFID 미태그 알림</h2>
+				                	<em>총 <b id="rfidTotalCnt"></b>건</em>
+				                </div>
+				                <div class="tbl_box scrollBar">
+			                        <table class="tbl02 none_hover">
+			                            <thead>
+			                                <tr>
+			                                    <th class="w8p">No</th>
+			                                    <th>운수회사</th>
+			                                    <th>전화번호</th>
+			                                    <th>알림 일시</th>
+			                                    <th>알림 내용</th>
+			                                </tr>
+			                            </thead>
+			                            <tbody id="rfidDataArea">
+			                            </tbody>
+			                        </table>
+			                    </div>
+			                    <div class="paging" id="rfidPaging">
+			                   	</div>
+			               	</div>
+		               	</div>
+	               	</section>
+	               	
+	            </div>
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+<script>
+$(document).ready(function() {
+	search();
+	$("#searchBtn").on("click", function() {
+		getDataList('rpt');
+		getDataList('rfid');
+		getDataList('chck');
+	});
+});
+
+function search(){
+	rfidDataList();
+	rptDataList();
+	chckDataList();
+}
+
+function rfidDataList(pageIndex = 1){
+	getDataList('rfid', pageIndex);
+}
+
+function rptDataList(pageIndex = 1){
+	getDataList('rpt', pageIndex);
+}
+
+function chckDataList(pageIndex = 1){
+	getDataList('chck', pageIndex);
+}
+
+function getDataList(rcptnType, pageIndex = 1){
+    var ownrNm = $("#ownrSelect").val();
+    var startDt = $("#startDt").val();
+    var endDt = $("#endDt").val();
+    
+    customFetch({
+        url: '/mngr/getAlertReceptionHstoryList',
+        method: 'POST',
+        params: {
+            pageIndex : pageIndex,
+            rcptnType: rcptnType,
+            ownrNm : ownrNm,
+            startDt : startDt,
+            endDt : endDt
+        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        onSuccess: (response) => {
+//         	console.log(rcptnType, response)
+            var html = '';
+            if (response && response.data && response.data.list) {
+                var list = response.data.list;
+                const paginationInfo = response.data.paginationInfo;
+                $("#" + rcptnType + "TotalCnt").text(paginationInfo.totalRecordCount);
+                if(list.length > 0){
+                    list.forEach(function(item, index) {
+                        const rowNumber = (paginationInfo.totalRecordCount || 0) -
+                            ((paginationInfo.currentPageNo - 1) * (paginationInfo.recordCountPerPage || 10)) - index;
+                        
+                        // dayjs를 사용해서 날짜 형식 변경
+                        const formattedDate = dayjs(item.regDt).format('YYYY-MM-DD HH:mm:ss');
+                        
+                        // ansCn을 JSON으로 파싱
+                        let msgCn = item.msgCn.length > 30 ? item.msgCn.substring(0, 20) + "..." : item.msgCn;
+                        
+                        html += `<tr>
+                            <td>${rowNumber}</td>
+                            <td>${item.ownrNm}</td>
+                            <td>${item.telno}</td>
+                            <td>${formattedDate}</td>
+                            <td>${msgCn}</td>
+                        </tr>`;
+                    });
+                    
+                    if (typeof setPagination === 'function') {
+                        setPagination(rcptnType+'Paging', rcptnType+'DataList', response.data.paginationInfo);
+                    }
+                    $("#" + rcptnType + "DataArea").html(html);
+                } else {
+                    html += `<tr>
+                        <td colspan="7">조회결과가 없습니다.</td>
+                    </tr>`;
+                    $("#" + rcptnType + "DataArea").html(html);
+                    setPagination('paging', 'getDataList', response.data.paginationInfo);
+                }
+//                 console.log(html)
+            }
+        },
+        onError: (error) => console.error('에러:', error)
+    });
+}
+</script>
+</body>
+</html>

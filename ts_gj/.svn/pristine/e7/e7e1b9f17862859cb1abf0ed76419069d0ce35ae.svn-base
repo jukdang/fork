@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.vehicle.service.impl.VehicleMapper">
+
+    <!-- 차량번호로 차량 검색 -->
+    <select id="selectRegNoList" resultType="egovMap">
+    	SELECT vhcl_sn
+    		 , reg_no
+    		 , ownr_nm
+    		 , mt_id
+    		 , vhcl_type
+    		 , vin
+    	FROM cmm_vhcl_info 
+    	WHERE 1=1
+    	    AND reg_no LIKE CONCAT('%', #{regNoInput}, '%')
+    	    <if test="authOwnrList != null and authOwnrList.size() > 0">
+    	        AND ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+    	    AND junk_yn = 'N'
+    	    AND use_yn = 'Y'
+    	ORDER BY reg_no
+    	<!-- LIMIT 5 -->
+    </select>
+    
+    <!-- 차량정보 -->
+    <select id="selectVehicleInfo" resultType="egovMap">
+	    SELECT 
+	        -- cmm_vhcl_info 테이블 컬럼들
+	        cvi.vhcl_sn,
+	        cvi.ownr_nm,
+	        cvi.reg_no,
+	        cvi.mt_id,
+	        cvi.vhcl_type,
+	        cvi.vin,
+	        cvi.fuel_cd,
+	        CASE 
+	            WHEN cvi.fuel_cd = 'FU06' THEN 'CNG'
+	            WHEN cvi.fuel_cd = 'FU02' THEN '경유'
+	            WHEN cvi.fuel_cd = 'FU05' THEN '수소'
+	            WHEN cvi.fuel_cd = 'FU04' THEN '전기'
+	            ELSE cvi.fuel_cd
+            END AS fuel_nm,
+	        cvi.vhcl_scale,
+	        cvi.mdl_nm,
+	        cvi.mdl_yr,
+	        cvi.mnftr_cd,
+	        cvi.me_id,
+	        cvi.reg_dt AS vhcl_reg_dt,
+	        cvi.mdfcn_dt AS vhcl_mdfcn_dt,
+	        cvi.use_yn AS vhcl_use_yn,
+	        cvi.junk_yn,
+	        cvi.junk_dt,
+	        cvi.rmrk,
+	        
+	        -- anls_vhcl_stts_rt 테이블 컬럼들
+	        avsr.vhcl_stts,
+	        avsr.cntr_stts,
+	        avsr.chck_stts,
+	        avsr.chck_list,
+	        avsr.bkdn_cd_list,
+	        avsr.lat,
+	        avsr.lng,
+	        CAST(avsr.scr AS UNSIGNED) AS scr,
+	        <if test="vhclSn != null and vhclSn != ''">
+		        (CASE 
+				    WHEN EXISTS (SELECT 1 FROM anls_vhcl_opr_hstry 
+				                 WHERE vhcl_sn = #{vhclSn}
+				                   AND anls_dt BETWEEN CONCAT(CURRENT_DATE, ' 00:00:00')
+				                                  AND CONCAT(CURRENT_DATE, ' 23:59:59'))
+				    THEN (SELECT ROUND(SUM(IFNULL(opr_dstnc, 0)), 2) 
+				          FROM anls_vhcl_opr_hstry 
+				          WHERE vhcl_sn = #{vhclSn}
+				            AND anls_dt BETWEEN CONCAT(CURRENT_DATE, ' 00:00:00')
+				                           AND CONCAT(CURRENT_DATE, ' 23:59:59') 
+				          GROUP BY vhcl_sn)
+				    ELSE 0
+				END) as opr_dstnc,
+	        </if>
+	        CAST(AES_DECRYPT(FROM_BASE64(avsr.oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm,
+	        avsr.reg_dt AS stts_reg_dt,
+	        avsr.mdfcn_dt AS stts_mdfcn_dt
+	    FROM 
+	        cmm_vhcl_info cvi
+	    LEFT JOIN 
+	        anls_vhcl_stts_rt avsr ON cvi.vhcl_sn = avsr.vhcl_sn
+	    WHERE 1=1
+	        <choose>
+	            <when test="regNoInput != null and regNoInput != ''">
+	                AND cvi.reg_no = #{regNoInput}
+	            </when>
+	            <when test="vhclSn != null and vhclSn != ''">
+	                AND cvi.vhcl_sn = #{vhclSn}
+	            </when>
+	        </choose>
+	        <if test="authOwnrList != null and authOwnrList.size() > 0">
+	            AND cvi.ownr_nm IN
+	            <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+	                #{ownr}
+	            </foreach>
+	        </if>
+	        AND cvi.junk_yn = 'N'
+	        AND cvi.use_yn = 'Y'
+	</select>
+    
+    <!-- 차량유형으로 센서 검색 -->
+    <select id="selectSensorInfo" resultType="egovMap">
+    	SELECT  snsr_sn
+			  , vhcl_type
+			  , sys_nm
+			  , sys_nm2
+			  , stts_type_yn
+			  , snsr_cd
+			  , snsr_nm
+			  , ifnull(un_nm, ' ') as un_nm
+			  , snsr_min
+			  , snsr_max
+			  , outlier_min
+			  , outlier_max
+			  , vw_min
+			  , vw_max
+			  , vw_yn
+			  , vw_rnk
+			  , rmrk
+			  , reg_dt
+			  , mdfcn_dt
+		FROM cmm_vhcl_snsr_info
+		WHERE 1 = 1
+		AND vhcl_type = #{vhclType}
+		<if test="referer != 'blackbox'">
+			AND vw_yn = 'Y'
+		</if>
+		ORDER BY sys_nm, vw_rnk ASC
+    </select>
+    
+    <!-- 	차량 목록 조회 -->
+	<select id="selectVehicleHist" resultType="egovMap">
+		SELECT
+		vhcl_sn
+		, ownr_nm
+		, reg_no
+		, fuel_cd
+		, mdl_nm
+		, mdl_yr
+		FROM cmm_vhcl_info cvi
+		WHERE 1=1 
+			<if test="authOwnrList != null and authOwnrList.size() > 0">
+				AND ownr_nm IN
+			<foreach collection="authOwnrList" item="ownr" open="("
+				close=")" separator=",">
+				#{ownr}
+			</foreach>
+			</if>
+			<if test="dataFilter != 'all'">
+				and ownr_nm = #{ownrNm}
+			</if>
+			<if test="ownrNm != 'all'">
+				and ownr_nm = #{ownrNm}
+			</if>
+			<if test="regNoInput != 'all'">
+				AND reg_no LIKE CONCAT('%', #{regNo}, '%')
+			</if>
+		ORDER BY reg_no
+		LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	</select>
+	
+	<!-- 	차량 목록 건수 -->
+	<select id="selectVehicleHistCnt">
+		SELECT
+		count(*) cnt
+		FROM cmm_vhcl_info cvi
+		WHERE 1=1 
+			<if test="authOwnrList != null and authOwnrList.size() > 0">
+				AND ownr_nm IN
+			<foreach collection="authOwnrList" item="ownr" open="("
+				close=")" separator=",">
+				#{ownr}
+			</foreach>
+			</if>
+			<if test="dataFilter != 'all'">
+				and ownr_nm = #{ownrNm}
+			</if>
+			<if test="ownrNm != 'all'">
+				and ownr_nm = #{ownrNm}
+			</if>
+			<if test="regNoInput != 'all'">
+				AND reg_no LIKE CONCAT('%', #{regNo}, '%')
+			</if>
+	</select>
+</mapper>

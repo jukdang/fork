@@ -1,0 +1,259 @@
+<!-- footer : S -->
+<th:block th:fragment="footer-simple">
+<footer class="simple footer">
+    <p>Ⓒ Copyright(c) Gwangju All Rights Reserved.</p>
+</footer>
+
+<!-- 알림 컨테이너 -->
+<div id="notificationContainer" class="notification-container">
+    <!-- 차량 점검 알림 레이어 -->
+    <div id="vehicleAlertLayer" class="vehicle-alert-layer" style="display: none;">
+        <div class="alert-header">
+            <div class="alert-title">
+                <span>차량 점검 알림</span>
+                <span class="alert-count" id="alertCount">0</span>
+            </div>
+            <div class="alert-controls">
+                <button class="control-btn close-btn" onclick="closeVehicleAlert()" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        
+        <div class="alert-body" id="alertBody">
+            <div class="vehicle-list-container">
+                <div id="vehicleAlertList" class="vehicle-list">
+                    <!-- 차량 알림들이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 기타 일반 알림들이 여기에 추가됩니다 -->
+</div>
+
+<!-- footer : E -->
+
+<script th:if="${message}" th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        /*<![CDATA[*/
+        var message = /*[[${message}]]*/ '';
+        if (message) {
+            alert(message);
+        }
+        /*]]>*/
+    });
+</script>
+
+<script>
+$(document).ready(function() {
+    // 10초마다 알림 체크
+    getVehicleChckAlarm();
+    setInterval(() => {
+//         getVehicleChckAlarm();
+    }, 5000*60);
+});
+
+document.addEventListener('keydown', function(event) {
+	  if (event.key === 'Enter' || event.key === ' ') {
+	    // 현재 포커스된 요소가 클릭 가능한지 확인 후 클릭
+	    const focusedElement = document.activeElement;
+	    if (focusedElement && typeof focusedElement.click === 'function') {
+	      focusedElement.click();
+	    }
+	  }
+	});
+
+function getVehicleChckAlarm() {
+    customFetch({
+        url: '/vehicle/getVehicleChckAlarm',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        loadingId: 'vehicleAlertList',
+        onSuccess: (response) => chckMessageOpen(response.data.list),
+        onError: (error) => console.error('에러 발생:', error)
+    });
+}
+
+function chckMessageOpen(data) {
+    // 점검 상태가 2(경고)인 차량들만 필터링
+    const alertVehicles = data.filter(vehicle => vehicle.chckStts === "2");
+    
+    if (alertVehicles.length > 0) {
+        showVehicleAlertLayer(alertVehicles);
+    } else {
+        hideVehicleAlertLayer();
+    }
+}
+
+// 차량 알림 레이어 표시
+function showVehicleAlertLayer(vehicles) {
+    const layer = document.getElementById('vehicleAlertLayer');
+    const alertList = document.getElementById('vehicleAlertList');
+    const alertCount = document.getElementById('alertCount');
+    
+    // 알림 카운트 업데이트
+    alertCount.textContent = vehicles.length;
+    
+    // 기존 내용 초기화
+    alertList.innerHTML = '';
+    
+    // 각 차량별 알림 카드 생성
+    vehicles.forEach(vehicle => {
+        const vehicleCard = createVehicleAlertCard(vehicle);
+        alertList.appendChild(vehicleCard);
+    });
+    
+    // 레이어 표시
+    layer.style.display = 'block';
+    setTimeout(() => {
+        layer.classList.add('show');
+    }, 100);
+}
+
+// 차량 알림 레이어 숨김
+function hideVehicleAlertLayer() {
+    const layer = document.getElementById('vehicleAlertLayer');
+    layer.classList.remove('show');
+    setTimeout(() => {
+        layer.style.display = 'none';
+    }, 400);
+}
+
+// 차량 알림 카드 생성
+function createVehicleAlertCard(vehicle) {
+    const card = document.createElement('div');
+    card.className = 'vehicle-alert-card';
+    card.id = `vehicle-card-${vehicle.vhclSn}`;
+    
+    let checkListHTML = '';
+    let scrHTML = '';
+    
+    // 점검 리스트 파싱 및 HTML 생성
+    if (vehicle.chckList) {
+        try {
+            const checkList = typeof vehicle.chckList === 'string' ? 
+                JSON.parse(vehicle.chckList) : vehicle.chckList;
+            
+            if (Array.isArray(checkList)) {
+                const filteredCheckList = checkList.filter(item => item.chck_stts != '0');
+                
+                if (filteredCheckList.length > 0) {
+                    checkListHTML = `
+                        <ul class="check-list">
+                            ${filteredCheckList.map(item => `
+                                <li class="check-item">
+		                            <span class="badge ${getStatusClass(item.chck_stts)}">
+			                            ${getStatusText(item.chck_stts)}
+			                        </span>
+                                    <span class="check-name">${item.chck_nm}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                }
+            }
+        } catch (e) {
+            console.error('점검 리스트 파싱 오류:', e);
+        }
+    }
+    
+    if (vehicle.scr) {
+    	scrHTML = `
+	    	<div class="ai-score-item">
+                <span class="danger ai-score-text">
+                	<i class="fa-solid fa-circle-exclamation"></i><em>AI 안전점수</em> 
+                </span>
+                <span class="ai-score"><b>${vehicle.scr}</b>점</span>
+	    	</div>
+	    	
+    	`;
+    }
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return '';
+        // dayjs 사용 (CDN에서 로드되었다고 가정)
+        return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss');
+    };
+    
+    card.innerHTML = `
+        <button class="vehicle-close-btn" onclick="closeVehicleCard('${vehicle.vhclSn}')" title="이 차량 알림 닫기"><i class="fa-solid fa-xmark"></i></button>
+        <div class="vehicle-info" onclick="showVehicleDetail('${vehicle.vhclSn}')" style="cursor: pointer;">
+            <div class="vehicle-reg">${vhclMasked(vehicle.regNo)}</div>
+        </div>
+        <div onclick="showVehicleDetail('${vehicle.vhclSn}')" style="cursor: pointer;">
+            ${scrHTML}
+        </div>
+    `;
+    
+    return card;
+}
+
+// 개별 차량 카드 닫기
+function closeVehicleCard(vhclSn) {
+    const card = document.getElementById(`vehicle-card-${vhclSn}`);
+    if (card) {
+        // 카드 제거 애니메이션
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(100%)';
+        card.style.marginBottom = '0';
+        card.style.maxHeight = '0';
+        card.style.padding = '0';
+        
+        setTimeout(() => {
+            if (card.parentNode) {
+                card.parentNode.removeChild(card);
+                
+                // 남은 카드 수 확인 후 전체 레이어 닫기
+                const remainingCards = document.querySelectorAll('.vehicle-alert-card');
+                if (remainingCards.length === 0) {
+                    hideVehicleAlertLayer();
+                } else {
+                    // 알림 카운트 업데이트
+                    const alertCount = document.getElementById('alertCount');
+                    alertCount.textContent = remainingCards.length;
+                }
+            }
+        }, 300);
+    }
+}
+
+// 차량 알림 레이어 닫기
+function closeVehicleAlert() {
+    hideVehicleAlertLayer();
+}
+
+// 점검 상태에 따른 CSS 클래스
+function getStatusClass(status) {
+    switch (String(status)) {
+        case '0': return 'safe';
+        case '1': return 'warning';
+        case '2': return 'danger';
+    }
+}
+
+// 점검 상태 텍스트
+function getStatusText(status) {
+    switch (String(status)) {
+        case '0': return '안전';
+        case '1': return '주의';
+        case '2': return '경고';
+    }
+}
+
+// 차량 상세보기 함수
+function showVehicleDetail(vhclSn) {
+    window.location.href = contextPath + `/vehicle/diagnosisRealtimeResult?vhclSn=${vhclSn}`;
+}
+
+// 알림 제거 함수
+function removeNotification(notificationId) {
+    const notification = document.getElementById(notificationId);
+    if (notification) {
+        notification.classList.add('hide');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }
+}
+</script>
+</th:block>

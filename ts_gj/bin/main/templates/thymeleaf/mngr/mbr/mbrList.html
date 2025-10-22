@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <th:block th:replace="/layout/head :: head-admin"></th:block>
+    <script th:inline="javascript">
+    var contextPath = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+    
+    // CSRF 토큰 전역 변수로 설정
+    var csrfToken = $('meta[name="_csrf"]').attr('content');
+    var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+    
+	    $(document).ready(function() {
+	        // 초기 상태 설정 - 소속명 검색만 사용
+	        // 별도 초기화 로직 불필요
+	        
+	        // jQuery AJAX 전역 설정에 CSRF 토큰 추가
+	        $.ajaxSetup({
+	            beforeSend: function(xhr) {
+	                xhr.setRequestHeader(csrfHeader, csrfToken);
+	            }
+	        });
+	    });
+    
+        // 서브밋 방식으로 페이징 처리하는 함수
+        function pagination(pageIndex) {
+            // 페이지 인덱스를 hidden input에 설정
+            $("#pageIndex").val(pageIndex);
+            // CSRF 토큰 추가 확인
+            addCsrfTokenToForm("#listForm");
+            // 폼 서브밋
+            $("#listForm").submit();
+        }
+        
+        // 검색 기능
+        function fn_search() {
+        	const searchType = $('select[name="searchType"]').val();
+            // 검색 시 페이지 인덱스를 1로 설정
+            $("#pageIndex").val(1);
+            // CSRF 토큰 추가 확인
+            addCsrfTokenToForm("#listForm");
+            $("#listForm").submit();
+        }
+        
+        // 폼에 CSRF 토큰 추가하는 함수
+        function addCsrfTokenToForm(formSelector) {
+            const form = $(formSelector);
+            
+            // 기존 CSRF 토큰 제거 (중복 방지)
+            form.find('input[name="_csrf"]').remove();
+            
+            // 새로운 CSRF 토큰 추가
+            if (csrfToken && csrfHeader) {
+                form.append('<input type="hidden" name="_csrf" value="' + csrfToken + '">');
+            }
+        }
+        
+        // 회원 상세 페이지로 이동하는 함수
+        function mbrDetail(mbrId) {
+            location.href = contextPath + "/mbr/mbrDetail/" + mbrId;
+        }
+        
+        // 전체 선택/해제 기능
+        function checkAll() {
+            const allCheck = document.getElementById('checkAll');
+            const itemChecks = document.querySelectorAll('input[name="selectedMembers"]');
+            
+            itemChecks.forEach(function(checkbox) {
+                checkbox.checked = allCheck.checked;
+            });
+        }
+        
+        // 개별 체크박스 상태 확인하여 전체 선택 체크박스 상태 업데이트
+        function updateCheckAll() {
+            const allCheck = document.getElementById('checkAll');
+            const itemChecks = document.querySelectorAll('input[name="selectedMembers"]');
+            const checkedItems = document.querySelectorAll('input[name="selectedMembers"]:checked');
+            
+            allCheck.checked = itemChecks.length === checkedItems.length;
+        }
+        
+        // 선택된 회원 삭제 기능
+        function deleteSelectedMembers() {
+            const checkedItems = document.querySelectorAll('input[name="selectedMembers"]:checked');
+            
+            if (checkedItems.length === 0) {
+                alert('삭제할 회원을 선택해주세요.');
+                return;
+            }
+            
+            if (confirm(checkedItems.length + '명의 회원을 삭제하시겠습니까?')) {
+                // 기존 폼 제거 (중복 방지)
+                const existingForm = document.getElementById('dynamicDeleteForm');
+                if (existingForm) {
+                    existingForm.remove();
+                }
+                
+                // 새로운 form 생성
+                const form = document.createElement('form');
+                form.setAttribute('id', 'dynamicDeleteForm');
+                form.setAttribute('method', 'post');
+                form.setAttribute('action', contextPath + '/mngr/mbr/mbrDelete');
+                
+                // CSRF 토큰 추가
+                if (csrfToken) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.setAttribute('type', 'hidden');
+                    csrfInput.setAttribute('name', '_csrf');
+                    csrfInput.setAttribute('value', csrfToken);
+                    form.appendChild(csrfInput);
+                }
+                
+                // 선택된 회원들의 sn을 hidden input으로 추가
+                checkedItems.forEach(function(checkbox) {
+                    const input = document.createElement('input');
+                    input.setAttribute('type', 'hidden');
+                    input.setAttribute('name', 'selectedSns');
+                    input.setAttribute('value', checkbox.value);
+                    form.appendChild(input);
+                });
+                
+                // body에 form 추가 후 submit
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // 문서 로드 완료 후 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 성공 메시지 출력
+            var message = /*[[${message}]]*/ '';
+            if (message && message !== '') {
+                alert(message);
+            }
+            
+            // 에러 메시지 출력
+            var errorMessage = /*[[${errorMessage}]]*/ '';
+            if (errorMessage && errorMessage !== '') {
+                alert(errorMessage);
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function () {
+            // 모든 tr.member-row에 이벤트 바인딩 (체크박스 영역 제외)
+            document.querySelectorAll('.member-row').forEach(function (row) {
+                row.addEventListener('click', function (e) {
+                    // 체크박스나 그 부모 td를 클릭한 경우는 상세페이지로 이동하지 않음
+                    if (e.target.type === 'checkbox' || e.target.closest('.checkbox-td')) {
+                        return;
+                    }
+                    
+                    const sn = this.getAttribute('data-sn');
+                    submitUpdateForm(sn);
+                });
+            });
+            
+            // 개별 체크박스 클릭 시 전체 선택 상태 업데이트
+            document.querySelectorAll('input[name="selectedMembers"]').forEach(function(checkbox) {
+                checkbox.addEventListener('change', updateCheckAll);
+            });
+        });
+
+        function submitUpdateForm(sn) {
+            // 기존 폼 제거 (중복 방지)
+            const existingForm = document.getElementById('dynamicUpdateForm');
+            if (existingForm) {
+                existingForm.remove();
+            }
+
+            // 새로운 form 생성
+            const form = document.createElement('form');
+            form.setAttribute('id', 'dynamicUpdateForm');
+            form.setAttribute('method', 'post');
+            form.setAttribute('action', contextPath + '/mngr/mbr/mbrUpdateForm');
+
+            // CSRF 토큰 추가
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.setAttribute('type', 'hidden');
+                csrfInput.setAttribute('name', '_csrf');
+                csrfInput.setAttribute('value', csrfToken);
+                form.appendChild(csrfInput);
+            }
+
+            // hidden input 생성
+            const input = document.createElement('input');
+            input.setAttribute('type', 'hidden');
+            input.setAttribute('name', 'sn');
+            input.setAttribute('value', sn);
+
+            // form에 input 추가
+            form.appendChild(input);
+
+            // body에 form 추가 후 submit
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 (모바일용) -->
+    <!-- <button class="menu-toggle" onclick="toggleMenu()">☰</button> -->
+    
+    <!-- wrap : S -->
+    <div class="wrap admin" id="wrap">
+		<!-- 상단 메뉴 -->
+	    <th:block th:replace="/layout/header :: left-menu-admin"></th:block>
+		    
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar">
+            <div class="contents board">
+                <div class="wrapper">
+                    <div class="tit_wrap">
+                    	<div class="stit_wrap type02">
+                        	<h1>계정 관리</h1>
+                        </div>
+						<!-- 검색 폼과 페이징을 위한 폼 -->
+                        <form id="listForm" name="listForm" method="post" th:action="@{/mngr/mbr/mbrList}">
+                            <!-- CSRF 토큰 추가 -->
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" id="pageIndex" name="pageIndex" th:value="${paginationInfo.currentPageNo}">
+                            <div class="top_right_area">
+								<div class="top_select" th:if="${isAdmin}">
+									<label>운수회사</label>
+	                               	<select id="searchType" name="searchType" style="display:none;">
+									    <option value="ownrNm" th:text="소속" th:selected="${#strings.equals(param.searchType, 'ownrNm')}"></option>
+									</select>
+									<select id="searchKeyword" name="searchKeyword">
+						    	        <option value="" th:if="${dataFilter == 'all'}">전체</option>
+								        <option th:each="ownr : ${authOwnrList}" 
+								                th:value="${ownr}" 
+								                th:text="${ownr}">
+								        </option>
+									</select>
+	                                <button type="button" class="btn mid blue" onclick="fn_search();">검색</button>
+                               </div>
+                           </div>
+                        </form>
+                    </div>
+                    
+                    <div class="board_list">
+                        <div class="wh_box">
+                            <div class="tbl_box scrollBar">
+                                <table class="tbl02">
+                                    <caption style="visibility:hidden">회원 목록 - 선택, 번호, 아이디, 이름, 이메일, 권한, 관리 표시하는 테이블</caption>
+                                    <thead>
+                                        <tr>
+                                            <th class="w5p">
+                                                <input type="checkbox" id="checkAll" onclick="checkAll()">
+                                            </th>
+                                            <th class="w10p">No</th>
+                                            <th class="w20p">소속</th>
+                                            <th class="w26p">권한</th>
+                                            <th class="w20p">아이디</th>
+                                            <th>최근 접속일시</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 회원 목록이 없는 경우 -->
+                                        <tr th:if="${#lists.isEmpty(mbrList)}">
+                                            <td colspan="6" th:align="center">등록된 회원이 없습니다.</td>
+                                        </tr>
+                                        <!-- 회원 목록이 있는 경우 -->
+                                        <tr th:each="mbr, status : ${mbrList}" class="member-row" th:attr="data-sn=${mbr.sn}">
+                                            <td th:class="'listtd checkbox-td'">
+                                                <input type="checkbox" name="selectedMembers" th:value="${mbr.sn}">
+                                            </td>
+                                            <td th:class="listtd">
+                                                <!-- 페이지 번호 계산: 전체 레코드 수 - ((현재 페이지 번호-1) * 페이지 당 레코드 수 + 현재 행 인덱스) -->
+                                                [[${(paginationInfo.totalRecordCount) - ((paginationInfo.currentPageNo-1) * paginationInfo.recordCountPerPage + status.index)}]]
+                                            </td>
+                                            <td th:class="listtd">[[${mbr.ownrNm}]]</td>
+                                            <td th:class="listtd" th:switch="${mbr.mbrRole}">
+                                                <span th:case="'ROLE_ADMIN'">시스템 관리자</span>
+                                                <span th:case="'ROLE_MANAGER'">관리자</span>
+                                                <span th:case="'ROLE_MECHANIC'">정비사</span>
+                                                <span th:case="*">[[${mbr.mbrRole}]]</span>
+                                            </td>
+                                            <td th:class="listtd">
+                                                <a href="javascript:void(0)" th:onclick="mbrDetail([[${mbr.mbrId}]])">[[${mbr.mbrId}]]</a>
+                                            </td>
+                                            <td th:class="listtd">[[${mbr.lastActDt}]]</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="btn_area jfright">
+                            <button class="btn mid bd_red" type="button" onclick="deleteSelectedMembers();">삭제</button>
+                            <a class="btn mid scolor" th:href="@{/mngr/mbr/mbrInsertForm}">계정 생성</a>
+                        </div>
+                        
+                        <!-- Paging -->
+
+                        <div th:utext="${#egovPaginationFormat.paginationFormat(paginationInfo, 'pagination')}"></div>
+
+                    </div>
+                </div>
+            </div>
+            
+	         <!-- 푸터 -->
+	    	<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+    
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+</body>
+</html>

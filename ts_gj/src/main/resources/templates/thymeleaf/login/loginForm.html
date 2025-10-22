@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <th:block th:replace="/layout/head :: head"></th:block>
+	<script th:src="@{/js/egovframework/pswdToggle.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+		<!-- 상단 헤더 -->
+		<th:block th:replace="/layout/header :: top-menu"></th:block>
+    
+	   	<!-- container : S -->
+		<div id="container">
+	        <!-- 로그인 : S -->
+	        <div class="contents login member_wrap">
+		<!--                 에러 메세지 alert 예시 -->
+		         <script th:if="${loginErrorMessage}" th:inline="javascript">
+				 /*<![CDATA[*/
+				 var errorMessage = /*[[${loginErrorMessage}]]*/ '';
+				 alert(errorMessage);
+				 /*]]>*/
+				</script>
+				<!-- 				에러메세지 출력 예시 -->
+				<!-- 				<span th:if="${session.loginErrorMessage}" th:text="${session.loginErrorMessage}"></span> -->
+		         
+		         <!-- 로그아웃 메시지 -->
+		         <!-- <div th:if="${param.logout}" class="alert alert-info">
+		             You have been logged out.
+		         </div> -->
+		         
+		         <!-- 로그인 폼 -->
+		         <form th:action="@{/login/loginProc}" method="post">
+		         	<div class="member_wrap_section">
+			         	<div class="logo" title="메인 페이지로 이동">
+							<a th:href="@{/}">
+								<span>광주 시내버스 관제</span>
+							</a>
+						</div>
+						<div class="wh_box">
+							<strong>로그인</strong>
+							<div>
+								<!-- 스크린 리더용 라벨 -->
+							    <label for="mbrId" class="sr-only">아이디</label>
+							    <input type="text" id="mbrId" name="mbrId" autofocus placeholder="아이디를 입력해주세요.">
+						    </div>
+						    <div class="pass_input">
+						    	<!-- 스크린 리더용 라벨 -->
+							    <label for="mbrPswd" class="sr-only">비밀번호</label>
+							    <input type="password" id="mbrPswd" name="mbrPswd" placeholder="비밀번호를 입력해주세요.">
+							    <span class="icon_view">
+							    <!-- 비밀번호 표시 -->
+							    <i class="fa-regular fa-eye" style="display: none;" tabindex="0"></i>
+							    <!-- 비밀번호 표시안함 -->
+							    <i class="fa-regular fa-eye-slash" tabindex="0"></i>
+							    </span>
+						    </div>
+						    
+						   	<!-- 에러 메시지 -->
+							<p th:if="${param.error}" class="alert alert_error">
+							    아이디와 비밀번호를 확인해주세요.
+							</p>
+							
+							<div class="check_area">
+								<div>
+								    <input type="checkbox" id="remember-me" name="remember-me">
+	        						<label for="remember-me" title="로그인 상태 유지">로그인 상태 유지</label>				
+							    </div>
+							   <!--  <a href="" title="아이디/비밀번호 찾기">아이디/비밀번호 찾기</a> -->
+						    </div>
+						    <button class="btn" type="submit" title="로그인">로그인</button>
+						</div>
+						<!-- <div class="join_area">
+							<span>아직 회원이 아니신가요?</span>
+				            <a th:href="@{/mbr/mbrAgree}" title="회원가입">회원가입</a>
+				        </div> -->
+					</div>
+					
+		         </form>
+		 	</div>
+		 	<!-- 로그인 : E -->
+		     
+		     <!-- 아이디 비밀번호 찾기 : S -->
+		     <!-- <div class="contents cheak_help member_wrap noside_cont" style="display: none;">
+		     	<form>
+			     	<section>
+					    <div class="wh_box">
+				         	<h2>아이디/비밀번호 찾기</h2>
+				         	<ul class="check_tab">
+				         		<li class="on btn scolor"><span>아이디 찾기</span></li>
+				         		<li><span>비밀번호 찾기</span></li>
+				         	</ul>
+				         	<div>
+					         	<div class="input_group">
+								    <label>이름</label>
+								    <input type="text" placeholder="이름을 입력해주세요.">
+								</div>
+								<div class="input_group">
+								    <label>이메일</label>
+								    <input type="text" placeholder="이메일을 입력해주세요.">
+							    </div>
+						    </div>
+						    <div class="form_btnarea">
+						    	<button class="btn lg mcolor">아이디 찾기</button>
+						    </div>
+				        </div>
+				     </section>
+			     </form>
+	         </div> -->
+	         <!-- 아이디 비밀번호 찾기 : E -->
+	    
+			
+		</div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+		<th:block th:replace="/layout/footer:: footer-simple"></th:block>
+		
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	$(function() {
+		//모바일 반응형 체크
+		if (isMobile()) {
+			$($(".menu-trigger.mobile_btn")[0]).hide();
+		}
+	})
+	</script>
+    
+</body>
+
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/customChart.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <div class="tit_wrap"><h1 th:text="${pageInfo.pageTitle}"></h1></div>
+	                <div class="filter_section">
+		                <div class="wh_box filter_area">
+	                		<div class="filter_wrap">
+								<div class="top_date">
+								    <label>기간</label>
+									<input type="date" id="startDt">
+							        <em>~</em>
+							        <input type="date" id="endDt">
+								</div>
+								<script>
+							        // 오늘 날짜
+							        const today = dayjs();
+							        // 7일 후 날짜 계산
+							        const sevenDaysLater = today.add(-7, 'day');
+							        
+							        // 기본값 설정 (YYYY-MM-DD 형식)
+							        document.getElementById('startDt').value = sevenDaysLater.format('YYYY-MM-DD');
+							        document.getElementById('endDt').value = today.format('YYYY-MM-DD');
+							        document.getElementById('endDt').max = today.format('YYYY-MM-DD');
+							    </script>
+								<div class="top_select">
+									<label>운수회사</label>
+									<div th:replace="/common/ownrSelect :: mngr-select"></div>
+                                    <button type="button" class="btn mid blue" id="searchBtn">검색</button>
+	                            </div>
+							</div>
+	                	</div>
+                	</div>
+                	<section>
+                		<div class="btn_date_wrap">
+                			<label>세부 기간 선택</label>
+					        <span class="ir_btn unit btn_date">
+								<input type="radio" id="unit01" name="totalDatetype" value="date" checked><label class="on" id="unit03_label" tabindex="0" for="unit01">일</label>
+								<input type="radio" id="unit02" name="totalDatetype" value="month"><label id="unit01_label" tabindex="0" for="unit02">월</label>
+							</span>
+						</div>
+                		<div class="col01" id="loadingArea">
+	                		<div class="wh_box">
+		                		<div class="stit_wrap type02">
+		                			<h2>전체 변화량</h2>
+		                			<div class="stit_right">
+			                			<a class="btn sm scolor" href="javascript:fn_download();">다운로드</a>
+		                			</div>
+		                		</div>
+		                		<div class="tbl_box scrollBar">
+			                        <table class="tbl02 none_hover">
+			                            <thead>
+			                                <tr>
+			                                    <th>일자</th>
+			                                    <th>총 탄소 배출량(kg)</th>
+			                                    <th>총 공회전 시간(분)</th>
+			                                    <th>평균 연비(km/m³)</th>
+			                                    <th>평균 전비(km/kWh)</th>
+			                                    <th>평균 수소전비(km/kWh)</th>
+			                                    <th>총 주행거리(km)</th>
+			                                </tr>
+			                            </thead>
+			                            <tbody id="dataArea">
+			                            	<tr>
+			                            		<td>2025-01-08</td>
+			                            		<td>98.7</td>
+			                            		<td>65.43</td>
+			                            		<td>3.6</td>
+			                            		<td>3.6</td>
+			                            		<td>3.6</td>
+			                            		<td>123,456</td>
+			                            	</tr>
+			                            </tbody>
+			                        </table>
+			                    </div>
+		                	</div>
+		                	<div class="col02">
+		                		<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>총 탄소배출량(t)</h2></div>
+	                				<div class="graph_area" id="chartDiv1" style="width: 100%; height: 300px;"></div>
+	                			</div>
+	                			<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>총 공회전 시간(시간)</h2></div>
+	                				<div class="graph_area" id="chartDiv2" style="width: 100%; height: 300px;"></div>
+	                			</div>
+		                	</div>
+		                	<div class="col02">
+		                		<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>평균 연비(km/m³)</h2></div>
+	                				<div class="graph_area" id="chartDiv3" style="width: 100%; height: 300px;"></div>
+	                			</div>
+	                			<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>평균 전비(km/kWh)</h2></div>
+	                				<div class="graph_area" id="chartDiv4" style="width: 100%; height: 300px;"></div>
+	                			</div>
+		                	</div>
+		                	<div class="col02">
+		                		<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>평균 수소연비(km/kWh)</h2></div>
+	                				<div class="graph_area" id="chartDiv5" style="width: 100%; height: 300px;"></div>
+	                			</div>
+	                			<div class="wh_box">
+	                				<div class="stit_wrap type02"><h2>총 주행거리(km)</h2></div>
+	                				<div class="graph_area" id="chartDiv6" style="width: 100%; height: 300px;"></div>
+	                			</div>
+		                	</div>
+	                	</div>
+                	</section>
+	            </div>
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+<script>
+	$(document).ready(function() {
+		getVariationStat();
+		$("#searchBtn").on("click", function() {
+			getVariationStat();
+		});
+		
+		$('input[name="totalDatetype"]').on('click', function() {
+		    const inputId = $(this).attr('id'); // input의 id 가져오기
+		    const label = $('label[for="' + inputId + '"]'); // 연결된 label 선택
+
+		    // 모든 label에서 'on' 제거
+		    $('input[name="totalDatetype"]').each(function() {
+		        const lbl = $('label[for="' + $(this).attr('id') + '"]');
+		        lbl.removeClass('on');
+		    });
+
+		    // 클릭한 input의 label에 'on' 추가
+		    label.addClass('on');
+
+		    // input 체크
+		    $(this).prop('checked', true);
+		    
+			getVariationStat();
+		});
+	});
+
+	function getVariationStat(){
+		var dateType = $('input[name="totalDatetype"]:checked').val();
+	    var ownrNm = $("#ownrSelect").val();
+	    var startDt = $("#startDt").val();
+	    var endDt = $("#endDt").val();
+	    
+	    customFetch({
+	        url: '/mngr/getVariationStat',
+	        method: 'POST',
+	        params: {
+	            ownrNm : ownrNm,
+	            startDt : startDt,
+	            endDt : endDt,
+	            dateType : dateType
+	        },
+	        loadingId : "loadingArea", 
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	        	let data = response.data.list;
+	        	if(data.length > 0){
+	        		let html;
+	        		data.forEach(function(item) {
+	        			   html += `
+	        			   <tr>
+	        			       <td>${item.anlsDt}</td>
+	        			       <td>${item.cb || 0}</td>
+	        			       <td>${item.idleTm || 0}</td>
+	        			       <td>${item.avgFu06 || '-'}</td>
+	        			       <td>${item.avgFu04 || '-'}</td>
+	        			       <td>${item.avgFu05 || '-'}</td>
+	        			       <td>${item.oprDstnc || 0}</td>
+	        			   </tr>
+	        			   `;
+	        			});
+					
+        			$("#dataArea").html(html);
+        			const sortedData = data.sort((a, b) => new Date(a.anlsDt) - new Date(b.anlsDt));
+        			makeLineChart('chartDiv1', sortedData.map(item => ({anlsDt: item.anlsDt,  '총 탄소 배출량(kg)': item.cb})), 'anlsDt');
+        			makeLineChart('chartDiv2', sortedData.map(item => ({anlsDt: item.anlsDt, '총 공회전 시간(분)': item.idleTm})), 'anlsDt');
+        			makeLineChart('chartDiv3', sortedData.map(item => ({anlsDt: item.anlsDt, '평균 연비(km/m³)': item.avgFu06})), 'anlsDt');
+        			makeLineChart('chartDiv4', sortedData.map(item => ({anlsDt: item.anlsDt, '평균 전비(km/kWh)': item.avgFu04})), 'anlsDt');
+        			makeLineChart('chartDiv5', sortedData.map(item => ({anlsDt: item.anlsDt, '평균 수소전비(km/kWh)': item.avgFu05})), 'anlsDt');
+        			makeLineChart('chartDiv6', sortedData.map(item => ({anlsDt: item.anlsDt, '총 주행거리(km)': item.oprDstnc})), 'anlsDt');
+	   			}else{
+	   				html += `
+	   					<tr>
+		                	<td colspan="7">조회 결과가 없습니다.</td>
+	                	</tr>
+	   				`;
+	   				
+	   				$("#dataArea").html(html);
+	   			}
+	        	
+	        },
+	        onError: (error) => console.error('에러:', error)
+	    });
+	}
+	
+	// Excel 다운로드 함수
+	function fn_download() {
+		var ownrNm = $("#ownrSelect").val();
+	    var startDt = $("#startDt").val();
+	    var endDt = $("#endDt").val();
+	    
+	    try {
+	        customFetch({
+	            url: '/mngr/variationStatDownload',
+	            method: 'POST',
+	            params: {
+	                ownrNm : ownrNm,
+		            startDt : startDt,
+		            endDt : endDt
+	            },
+	            responseType: 'blob',
+	            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	            onSuccess: (blob) => {
+	                // 이제 blob을 바로 사용 가능
+	                const url = window.URL.createObjectURL(blob);
+	                const a = document.createElement('a');
+	                a.style.display = 'none';
+	                a.href = url;
+	                
+	                const now = new Date();
+	                const dateStr = now.getFullYear() + 
+	                               String(now.getMonth() + 1).padStart(2, '0') + 
+	                               String(now.getDate()).padStart(2, '0') + '_' +
+	                               String(now.getHours()).padStart(2, '0') + 
+	                               String(now.getMinutes()).padStart(2, '0') + 
+	                               String(now.getSeconds()).padStart(2, '0');
+	                
+	                a.download = `변화량통계_${dateStr}.xlsx`;
+	                
+	                document.body.appendChild(a);
+	                a.click();
+	                window.URL.revokeObjectURL(url);
+	                document.body.removeChild(a);
+	            },
+	            onError: (error) => {
+	                console.error('다운로드 오류:', error);
+	            }
+	        });
+	    } catch (error) {
+	        console.error('다운로드 오류:', error);
+	    }
+	}
+</script>
+</body>
+</html>

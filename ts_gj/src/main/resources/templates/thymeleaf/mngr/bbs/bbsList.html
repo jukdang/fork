@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:inline="javascript">
+		var contextPath = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+        
+        // 서브밋 방식으로 페이징 처리하는 함수
+        function pagination(pageIndex) {
+            // 페이지 인덱스를 hidden input에 설정
+            $("#pageIndex").val(pageIndex);
+            // 폼 서브밋
+            $("#listForm").submit();
+        }
+        
+        // 검색 기능
+        function fn_search() {
+            // 검색 시 페이지 인덱스를 1로 설정
+            $("#pageIndex").val(1);
+            $("#listForm").submit();
+        }
+        
+     	// 게시물 상세 페이지로 이동하는 함수
+        function boardDetail(sn) {
+            location.href = "/mngr/bbs/bbsDetail?sn=" + sn;
+        }
+    </script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap admin" id="wrap">
+	    <!-- 상단 헤더 -->
+	   	<th:block th:replace="/layout/header :: left-menu-admin"></th:block>
+   	
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar">
+	       <!-- 메인 컨텐츠 -->
+	       <div class="contents board">
+			<div class="wrapper">
+			
+				<div class="tit_wrap" th:switch="${pageInfo.ctgry}">
+				    <h1 th:case="'all'">게시물</h1>
+				    <h1 th:case="'ntc'">공지사항</h1>
+				    <h1 th:case="'sample'">샘플</h1>
+				    <h1 th:case="'*'">게시물</h1>
+				</div>
+				<section class="board_list notice">
+					<!-- 검색 폼과 페이징을 위한 폼 -->
+					<form id="listForm" name="listForm" method="get" action="/mngr/bbs/bbsList">
+						<input type="hidden" id="pageIndex" name="pageIndex" th:value="${paginationInfo.currentPageNo}">
+						
+						<div class="stit_wrap tit_search">
+							<div class="board_search">
+								<input type="hidden" name="ctgry" th:value="${pageInfo.ctgry}">
+<!-- 								<select name="ctgry"> -->
+<!-- 									<option value="all" th:selected="${pageInfo.ctgry == 'all'}">전체</option> -->
+<!-- 									<option value="ntc" th:selected="${pageInfo.ctgry == 'ntc'}">공지사항</option> -->
+<!-- 								</select> -->
+								<select name="searchType">
+<!-- 									<option value="all" th:selected="${pageInfo.searchType == 'all'}">전체</option> -->
+									<option value="all" th:selected="${pageInfo != null and pageInfo['searchType'] == 'all'}">전체</option>
+									<option value="ttl" th:selected="${pageInfo != null and pageInfo['searchType'] == 'ttl'}">제목</option>
+									<option value="cn" th:selected="${pageInfo != null and pageInfo['searchType'] == 'cn'}">내용</option>
+								</select>
+								<div class="set_search">
+									<input type="text" name="searchKywd" th:value="${param.searchKywd}" placeholder="검색어를 입력하세요.">
+									<button type="button" class="btn mid mcolor" onclick="fn_search();">검색</button>
+								</div>
+							</div>
+							<em>총 <b th:text="${paginationInfo.totalRecordCount}"></b>건</em>
+						</div>
+					</form>
+					
+					<div class="wh_box">
+						<div class="tbl_box scrollBar">
+						<table class="tbl02">
+							<caption style="visibility:hidden">카테고리ID, 카테고리명, 사용여부, Description, 등록자 표시하는 테이블</caption>
+							<thead>
+							<tr>
+								<th class="w8p">No</th>
+								<th class="w10p">카테고리</th>
+								<th class="w40p">제목</th>
+								<th class="w8p">첨부파일</th>
+								<th class="w8p">팝업공지</th>
+								<th class="w10p">등록자</th>
+								<th class="w10p">등록일</th>
+								<th>조회수</th>
+							</tr>
+							</thead>
+							<!-- 게시글 목록 반복 출력 (EgovMap 사용) -->
+							<tr th:each="board, status : ${resultList}" th:onclick="boardDetail([[${board.sn}]])">
+								<td th:class="listtd">
+									<!-- 중요 아이콘 -->
+									<span th:if="${board['imptYn'] == 'Y'}">
+									    <i class="fa-solid fa-bullhorn"></i>
+									</span>
+									
+									<!-- 그 외의 경우: 페이지 번호 계산 -->
+									<span th:unless="${board['imptYn'] == 'Y'}">
+									    [[${paginationInfo.totalRecordCount - ((paginationInfo.currentPageNo - 1) * paginationInfo.recordCountPerPage + status.index)}]]
+									</span>
+								</td>
+								<td th:class="listtd" th:switch="${board.ctgry}">
+									<span class="board_cate" th:case="'ntc'">공지사항</span>
+									<span th:case="*">[[${board.ctgry}]]</span>
+								</td>
+								<td th:class="listtd">
+									<a class="list_tit" href="javascript:void(0)">[[${board.ttl}]]</a>
+								</td>
+								<td th:class="listtd">
+									<span th:if="${board.fileCount > 0}" class="file-icon">
+									   <i class="fa-regular fa-file"></i> <!-- [[${board.fileCount}]] -->
+									</span>
+								</td>
+								<td th:class="listtd">
+									<span th:if="${board.popupNotice == 'Y'}" class="popup-icon">
+										<i class="fa-solid fa-check"></i>
+									</span>
+								</td>
+								<td th:class="listtd">[[${board.regId}]]</td>
+								<td th:class="listtd" th:text="${#dates.format(board.regDt, 'yyyy-MM-dd')}"></td>
+								<td th:class="listtd">[[${board.inqCnt}]]</td>
+							</tr>
+							<!-- 데이터가 없을 경우 -->
+							<tr th:if="${#lists.isEmpty(resultList)}">
+								<td colspan="8" th:align="center">등록된 게시물이 없습니다.</td>
+							</tr>
+						</table>
+						</div>
+					</div>
+					<div class="tar mt20">
+						<!-- <a class="btn sm" href="/bbs/bbsDetail">게시물 상세</a> -->
+						<a class="btn mid scolor" th:href="@{/mngr/bbs/bbsInsertForm(ctgry=${pageInfo.ctgry})}">게시물 등록</a>
+					</div>
+					<!-- Paging -->
+					<div id="paging">
+						<span th:utext="${#egovPaginationFormat.paginationFormat(paginationInfo, 'pagination')}"></span>
+					</div>
+				</section>
+			</div>
+	       </div>
+	       
+		
+      
+		    <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+    
+   		 </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+</body>
+</html>

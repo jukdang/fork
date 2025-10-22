@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.vehicle.service.impl.RepairAssistMapper">
+    <!-- 채팅방 생성 -->
+	<insert id="insertChatList" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="chat_sn">
+	    INSERT INTO svc_chat_list (
+	        ownr_nm,
+	        mbr_id,
+	        vhcl_sn
+	    ) VALUES (
+	        #{currentOwnrNm},
+	        #{currentUserId},
+	        #{vhclSn}
+	    )
+	</insert>
+    
+    <!-- 채팅방 조회 -->
+	<select id="selectChatInfo">
+	    select 
+	    	chat_sn,
+	    	ownr_nm,
+	    	mbr_id,
+	    	vhcl_sn,
+	    	reg_dt
+	    from svc_chat_list 
+	    where 1=1
+	    	and chat_sn = #{chatSn}
+	    	<if test="dataFilter != null and dataFilter == 'ownr' and currentOwnrNm != null and currentOwnrNm != ''">
+	            AND ownr_nm = #{currentOwnrNm}
+	        </if>
+	</select>
+    
+    <!-- 채팅방 내용 조회 -->
+	<select id="selectChatCnList">
+	    select 
+	    	chat_cn_sn,
+	    	chat_sn,
+	    	ownr_nm,
+	    	mbr_id,
+	    	vhcl_sn,
+	    	qstn_cn,
+	    	ans_cn,
+	    	JSON_EXTRACT(ans_cn, '$.answer') as answer,
+	    	JSON_EXTRACT(ans_cn, '$.error') as error,
+        	JSON_EXTRACT(ans_cn, '$.recommended_questions') as recommend,
+	    	evl,
+	    	reg_dt
+	    from svc_chat_cn_list 
+	    where 1=1
+	    	and chat_sn = #{chatSn}
+	    	<if test="dataFilter != null and dataFilter == 'ownr' and currentOwnrNm != null and currentOwnrNm != ''">
+	            AND ownr_nm = #{currentOwnrNm}
+	        </if>
+	    order by chat_cn_sn asc
+	</select>
+	
+	<!-- 채팅 내용 저장 -->
+	<insert id="insertChatContent" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="chat_cn_sn">
+	    INSERT INTO svc_chat_cn_list (
+	    	chat_sn,
+	        ownr_nm,
+	        mbr_id,
+	        vhcl_sn,
+	        qstn_cn,
+	        ans_cn
+	    ) VALUES (
+	    	#{chatSn},
+	        #{currentOwnrNm},
+	        #{currentUserId},
+	        #{vhclSn},
+	        #{qstnCn},
+	        #{ansCn}
+	    )
+	</insert>
+	
+	<!-- 채팅 내용 피드백 수정 -->
+	<update id="updateChatCnFeedBack" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="chat_cn_sn">
+		UPDATE svc_chat_cn_list
+			SET evl = #{evl}
+		WHERE chat_cn_sn = #{chatCnSn}
+	</update>
+	    
+    <!-- 채팅 내용 목록 조회 -->
+	<select id="selectChatPromptList">
+		select 
+	    	chat_cn_sn,
+	    	chat_sn,
+	    	ifnull(ownr_nm,'') as ownr_nm,
+	    	mbr_id,
+	    	vhcl_sn,
+	    	qstn_cn,
+	    	ans_cn,
+	    	JSON_EXTRACT(ans_cn, '$.answer') as answer,
+	    	JSON_EXTRACT(ans_cn, '$.error') as error,
+        	JSON_EXTRACT(ans_cn, '$.recommended_questions') as recommend,
+	    	ifnull(evl,'') as evl,
+	    	reg_dt
+	    from svc_chat_cn_list 
+	    where 1=1
+	    	AND (
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null or ownr_nm = ''
+			</if>
+			)
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	    	<![CDATA[
+		    	AND reg_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND reg_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+	    order by reg_dt desc
+	    <if test="searchType != null and searchType == 'list'">
+	    LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	    </if>
+	</select>
+	
+    <!-- 채팅 내용 목록 건수 조회 -->
+	<select id="selectChatPromptListCnt">
+	    select 
+	    	count(*)
+	    from svc_chat_cn_list 
+	    where 1=1
+	    	AND (
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null or ownr_nm = ''
+			</if>
+			)
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	    	<![CDATA[
+		    	AND reg_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		      	AND reg_dt <= CONCAT(#{endDt}, ' 23:59:59') 
+	      	]]> 
+	</select>
+	
+		    
+	<!-- 일별 건수 조회 -->
+	<select id="selectChatPromptLineList">
+		SELECT
+		    CASE 
+		        WHEN #{dateType} = 'date' THEN DATE(reg_dt)
+		        WHEN #{dateType} = 'month' THEN DATE_FORMAT(reg_dt, '%Y-%m')
+		    END AS date,
+		    COUNT(reg_dt) as cnt
+		FROM svc_chat_cn_list
+		WHERE 1=1
+		    AND (
+		        <if test="authOwnrList != null and authOwnrList.size() > 0">
+		        ownr_nm IN
+		        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+		            #{ownr}
+		        </foreach>
+		        </if>
+		        <if test="dataFilter == 'all'">
+		        OR ownr_nm IS NULL or ownr_nm = ''
+		        </if>
+		    )
+		    <if test="ownrNm != null and ownrNm != ''">
+		        <choose>
+		            <when test="ownrNm != 'all'">
+		            AND ownr_nm = #{ownrNm}
+		            </when>
+		        </choose>
+		    </if>
+		    <![CDATA[
+		    AND reg_dt >= CONCAT(#{startDt}, ' 00:00:00')
+		    AND reg_dt <= CONCAT(#{endDt}, ' 23:59:59')
+		    ]]>
+		GROUP BY 
+		    CASE 
+		        WHEN #{dateType} = 'date' THEN DATE(reg_dt)
+		        WHEN #{dateType} = 'month' THEN DATE_FORMAT(reg_dt, '%Y-%m')
+		    END
+	</select>
+</mapper>

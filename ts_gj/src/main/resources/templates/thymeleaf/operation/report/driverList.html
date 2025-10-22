@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+	<script th:src="@{/js/egovframework/common.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <div class="filter_area wh_box">
+						<div class="filter_box_wrap">
+							<div class="filter_box">
+				    			<!-- 소유자 선택 -->
+                            	<div th:replace="/common/ownrSelect :: ownr-select"></div>
+				    		</div>
+							<div class="filter_box">
+				    			<label for="rptYm">기간</label>
+								<input id="rptYm" type="month">
+				    		</div>
+			    		</div>
+			    		<button class="btn lg black btn_search" onclick="getDriverList();">검색</button>
+					</div>
+					<p class="info_text"><i class="fa-solid fa-circle-info"></i>본 리포트는 전월 1일부터 말일까지의 운행 데이터를 기반으로, 매월 1일에 생성됩니다.</p>
+					
+					<div class="cont_section">
+						<div class="tit">
+							<h2>전체 현황</h2>
+						</div>
+						<div class="wh_box overall_status_wrap">
+							<ul class="overall_status">
+								<li><strong><!-- <i class="ai_icon"><img th:src="@{/images/egovframework/ai_icon_gj.svg}" alt="광주 AI 아이콘"></i>AI --><i class="fa-solid fa-chart-simple"></i>안전점수 평균</strong><span><b id="avgScore">0</b>점</span></li>
+								<li><strong><i class="fa-regular fa-face-smile"></i>양호 운전원</strong><span><b id="countGood">0</b>명</span></li>
+								<li><strong><i class="fa-regular fa-face-meh"></i>주의 운전원</strong><span><b id="countWarning">0</b>명</span></li>
+								<li><strong><i class="fa-regular fa-face-frown"></i>위험 운전원</strong><span><b id="countDanger">0</b>명</span></li>
+							</ul>
+						</div>
+					</div>
+					<div class="cont_section">
+						<div class="tit">
+							<h2>운전원별 현황</h2>
+						</div>
+						
+						<!-- 조회 결과 없을 경우 공통 -->
+						<div class="cont_none_wrap" style="display: none;">
+							<div class="cont_none type02">
+						 		<i class="fa-solid fa-file-circle-xmark"></i>
+						 		<p>조회 결과가 없습니다.</p>
+						 	</div>
+					 	</div>
+					 	
+						<ul class="driver_status" id="driverList">
+							<!-- <li class="driver_card good">
+								<p><span class="badge good">양호</span>홍*동</p><span class="driver_score"><b>95</b>점</span>
+							</li>
+							<li class="driver_card warning">
+								<p><span class="badge warning">주의</span>홍*동</p><span class="driver_score"><b>95</b>점</span>
+							</li>
+							<li class="driver_card danger">
+								<p><span class="badge danger">위험</span>홍*동</p><span class="driver_score"><b>95</b>점</span>
+							</li> -->
+						</ul>
+					</div>
+	            </div>
+	        </div>
+	        
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+	    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	//defaultDate setting
+	let defaultDate = dayjs().subtract(1, "month").format("YYYY-MM"); 
+	$("#rptYm").val(defaultDate);
+	$("#rptYm").attr("max", defaultDate);
+	
+	let searchParam = {};
+	
+	$(function () {
+		getDriverList();
+	})
+	
+	//운전원 목록 조회
+	function getDriverList() {
+		
+		$("#driverList").empty();
+		
+		const params = {
+			ownrNm: $("#ownrSelect").val(),
+			rptYm: $("#rptYm").val().replaceAll("-","")
+	    };
+		
+		searchParam = params;
+		
+	    customFetch({
+	        url: '/operation/getDriverList',
+	        method: 'POST',
+	        params: params,
+	        loadingId: 'wrap',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getDriverList 조회 성공:', response);
+	            setDriverList(response);
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	    
+	}
+	
+	// 운전원 목록 조회 콜백함수
+	function setDriverList(response) {
+		
+		const $list = $('#driverList');
+		
+		$list.empty();
+		
+		$(".cont_none_wrap").hide();
+		
+		if(response.code == 200) {
+			
+			// 초기화
+		    let totalScore = 0;
+		    let countGood = 0;    // 90 이상
+		    let countWarning = 0; // 80 이상 90 미만
+		    let countDanger = 0;  // 80 미만
+	
+		    const drivers = response.data.list;
+			
+		    if(drivers.length > 0) {
+		    	
+			    drivers.forEach(driver => {
+			    	
+			        let cardClass, badgeClass, badgeText;
+			        const score = Number(driver.oprScr) || 0; // null 또는 undefined이면 0 처리
+		
+			        totalScore += score;
+		
+			        if (score >= 90) {
+			            countGood++;
+			        } else if (score >= 80) {
+			            countWarning++;
+			        } else {
+			            countDanger++;
+			        }
+		
+			        if (score >= 90) {
+			            cardClass = 'driver_card good';
+			            badgeClass = 'good';
+			            badgeText = '양호';
+			        } else if (score >= 80) {
+			            cardClass = 'driver_card warning';
+			            badgeClass = 'warning';
+			            badgeText = '주의';
+			        } else {
+			            cardClass = 'driver_card danger';
+			            badgeClass = 'danger';
+			            badgeText = '위험';
+			        }
+		
+			        const $li = $(`
+			            <li tabindex="0" class="${cardClass}" onclick="goDetail('${driver.oprtrId}');">
+			                <p><span class="badge ${badgeClass}">${badgeText}</span>${oprtrMasked(driver.oprtrNm)}</p>
+			                <span class="driver_score"><b>${score}</b>점</span>
+			            </li>
+			        `);
+		
+			        $list.append($li);
+			    });
+			    
+		    }else {
+		    	$(".cont_none_wrap").show();
+		    }
+		    
+		    let avgScore = (drivers.length > 0 ? (totalScore / drivers.length) : 0).toFixed(2);
+		    if(avgScore.split(".")[1] == "00") {
+		    	avgScore = avgScore.split(".")[0];
+		    }
+	
+		 	// 변수에 담기 및 화면 출력
+		    const scoreStats = { avgScore, countGood, countWarning, countDanger };
+	
+		    // 화면에 표시
+		    ['avgScore', 'countGood', 'countWarning', 'countDanger'].forEach(id => {
+		        $(`#${id}`).text(scoreStats[id]);
+		    });
+	
+			
+		}
+		
+	}
+	
+	//상세 페이지로 이동
+	function goDetail(oprtrId) {
+	    if (!oprtrId) {
+	        console.warn('운전원 정보가 없습니다.');
+	        return;
+	    }
+	    
+	    // 상세 페이지로 이동 (실제 URL은 프로젝트에 맞게 수정)
+	    window.location.href = contextPath + `/operation/report?oprtrId=${oprtrId}&rptYm=${searchParam.rptYm}`;
+	}
+	</script>
+   
+</body>
+</html>

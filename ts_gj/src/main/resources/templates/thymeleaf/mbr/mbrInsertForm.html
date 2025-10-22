@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+	<script type="text/javascript" th:src="@{/js/egovframework/pswdToggle.js}"></script>
+    <meta charset="UTF-8">
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    	<!-- 상단 헤더 -->
+    	<th:block th:replace="/layout/header :: top-menu"></th:block>
+	
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar noside_cont">
+		    <div class="contents member_wrap">
+		    	<section>
+			    <div class="wh_box">
+			    	
+			        <!-- 에러 메시지 표시 -->
+			        <div th:if="${error}" class="alert">
+			            <span th:text="${error}"></span>
+			        </div>
+			        
+			        <!-- 회원가입 폼 : S -->
+			        <div class="personal_info02">
+			        	<div class="disbetween">
+						    <h2>회원가입</h2>
+						    <em class="point">*필수 입력 사항</em>
+					    </div>
+				        <form th:action="@{/mbr/mbrSelfInsert}" th:object="${mbrVO}" method="post">
+				        	<div>
+					            <div class="input_group">
+								    <label for="mbrId">아이디<em class="point">*</em></label>
+								    <div class="id_check">
+								        <input type="text" th:field="*{mbrId}" id="mbrId" placeholder="아이디를 입력해주세요.">
+								        <button type="button" class="btn mid scolor" id="chkMbrId">중복확인</button>
+								    </div>
+								    <p id="mbrIdChkRslt" class="form-text alert_error"></p>
+								    <div class="error" th:if="${#fields.hasErrors('mbrId')}" th:errors="*{mbrId}"></div>
+								</div>
+					            
+					            <div>
+					                <label for="mbrPswd">비밀번호<em class="point">*</em></label>
+					                <div class="pass_input">
+					                	<input type="password" th:field="*{mbrPswd}" id="mbrPswd" placeholder="비밀번호를 입력해주세요.">
+						                <span class="icon_view">
+						                <!-- 비밀번호 표시 -->
+										    <i class="fa-regular fa-eye" style="display: none;"></i>
+										    <!-- 비밀번호 표시안함 -->
+										    <i class="fa-regular fa-eye-slash"></i>
+									    </span>
+						                <div class="error" th:if="${#fields.hasErrors('mbrPswd')}" th:errors="*{mbrPswd}"></div>
+					                </div>
+					            </div>
+					            
+					            <div>
+					                <label for="confirmPswd">비밀번호 확인<em class="point">*</em></label>
+					                <div class="pass_input">
+						                <input type="password" id="confirmPswd" name="confirmPswd" placeholder="비밀번호를 다시 입력해주세요.">
+						                <span class="icon_view">
+						                <!-- 비밀번호 표시 -->
+										    <i class="fa-regular fa-eye" style="display: none;"></i>
+										    <!-- 비밀번호 표시안함 -->
+										    <i class="fa-regular fa-eye-slash"></i>
+									    </span>
+								    </div>
+					            </div>
+					            
+					            <div class="input_group">
+					                <label for="mbrNm">이름<em class="point">*</em></label>
+					                <input type="text" th:field="*{mbrNm}" id="mbrNm" placeholder="이름을 입력해주세요.">
+					                <div class="error" th:if="${#fields.hasErrors('mbrNm')}" th:errors="*{mbrNm}"></div>
+					            </div>
+					            
+					            <div class="input_group">
+					                <label for="mbrTelNo">연락처<em class="point">*</em></label>
+					                <input type="text" th:field="*{mbrTelNo}" id="mbrTelNo" placeholder="연락처를 숫자만 입력해주세요.">
+					                <div class="error" th:if="${#fields.hasErrors('mbrTelNo')}" th:errors="*{mbrTelNo}"></div>
+					            </div>
+					            
+					            <div class="input_group">
+					                <label for="mbrEmail">이메일<em class="point">*</em></label>
+					                <div class="email">
+					                	<div>
+											<input type="text" id="emailId" placeholder="이메일">
+											<span>@</span>
+											<input type="text" id="emailDomain">
+										</div>
+										<select id="domainSelect">
+											<option value="">직접입력</option>
+								            <option value="naver.com">naver.com</option>
+								            <option value="gmail.com">gmail.com</option>
+								            <option value="kakao.com">kakao.com</option>
+								            <option value="hanmail.net">hanmail.net</option>
+								            <option value="daum.net">daum.net</option>
+								            <option value="nate.com">nate.com</option>
+								        </select>
+									</div>
+									<!-- 최종 이메일을 Thymeleaf가 처리할 hidden 필드에 바인딩 -->
+						            <input type="hidden" id="mbrEmail" name="mbrEmail" th:field="*{mbrEmail}">
+						            <div class="error" th:if="${#fields.hasErrors('mbrEmail')}" th:errors="*{mbrEmail}"></div>
+					            </div>
+				            </div>
+				            
+				            <div class="form_btnarea">
+				                <a th:href="@{/mbr/mbrAgree}" class="btn lg grey">이전단계</a>
+				               	<button type="submit" class="btn lg mcolor">회원가입</button>
+				            </div>
+				            
+				            <input type="hidden" id="prvcClctAgreYn" name="prvcClctAgreYn" th:field="*{prvcClctAgreYn}">
+				            <input type="hidden" id="utztnTrmsAgreYn" name="utztnTrmsAgreYn" th:field="*{utztnTrmsAgreYn}">
+				        </form>
+			        </div>
+			        <!-- 회원가입 폼 : E -->
+			    </div>
+			    </section>
+		    </div>
+		    
+		    <!-- 푸터 -->
+    		<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+    
+    <script>
+	    $(document).ready(function() {
+	        var idChecked = false; // 아이디 중복 확인 여부
+	
+	        // 아이디 중복 확인
+	        $("#chkMbrId").click(function() {
+	            var mbrId = $("#mbrId").val();
+	            
+	            if (mbrId.length < 4) {
+	                $("#mbrIdChkRslt").text("아이디는 최소 4자 이상이어야 합니다.").css("color","#d05050");
+	                idChecked = false;
+	                return;
+	            }
+	            
+	            $.ajax({
+	                url: "/mbr/chkMbrId",
+	                type: "POST",
+	                data: {mbrId: mbrId},
+	                success: function(result) {
+	                    if (result == 0) {
+	                        $("#mbrIdChkRslt").text("사용 가능한 아이디입니다.").css("color", "#1a971f");
+	                        idChecked = true;
+	                    } else {
+	                        $("#mbrIdChkRslt").text("이미 사용 중인 아이디입니다.").css("color","#d05050");
+	                        idChecked = false;
+	                    }
+	                },
+	                error: function() {
+	                    $("#mbrIdChkRslt").text("서버 오류가 발생했습니다.").css("color","#d05050");
+	                    idChecked = false;
+	                }
+	            });
+	        });
+	        
+	        // 도메인 선택 시 자동 입력
+	        $("#domainSelect").change(function() {
+	            $("#emailDomain").val($(this).val());
+	        });
+	
+	        // 폼 제출 전 유효성 검사
+	        $("form").submit(function(e) {
+	            var password = $("#mbrPswd").val();
+	            var confirmPassword = $("#confirmPswd").val();
+	            
+	            // 1. 아이디 중복 체크 안 했으면 막기
+	            if (!idChecked) {
+	                e.preventDefault();
+	                alert("아이디 중복 확인을 해주세요.");
+	                return false;
+	            }
+	            
+	            // 2. 비밀번호랑 비밀번호 확인이 다르면 막기
+	            if (password !== confirmPassword) {
+	                e.preventDefault();
+	                alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+	                return false;
+	            }
+	            
+	            // 3. 이메일 조합 처리
+	            var emailId = $("#emailId").val().trim();
+	            var emailDomain = $("#emailDomain").val().trim();
+	            
+	            // 이메일이 모두 입력된 경우만 조합
+	            if (emailId && emailDomain) {
+	                $("#mbrEmail").val(emailId + '@' + emailDomain);
+	            } else if (emailId || emailDomain) {
+	                // 둘 중 하나만 입력된 경우
+	                e.preventDefault();
+	                alert("이메일 아이디와 도메인을 모두 입력해주세요.");
+	                return false;
+	            }
+	            
+	            return true;
+	        });
+	    });
+	    
+	    $("#mbrTelNo").on("input", function () {
+	        let value = $(this).val();
+	        // 숫자 이외 문자 제거
+	        value = value.replace(/[^0-9]/g, "");
+	        $(this).val(value);
+	    });
+    </script>
+
+</body>
+</html>

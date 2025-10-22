@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.mngr.service.impl.MngrConnectorMapper">
+    
+    <!-- 알림 수신관리 - 수신자 목록 -->
+	<select id="selectConnectorStatusList">
+		select 
+	    	(SELECT reg_no FROM cmm_vhcl_info where vhcl_sn = avch.vhcl_sn) AS reg_no
+			, avch.vhcl_sn
+	    	, ownr_nm
+	    	, cntr_end_dt
+	    	, reg_dt
+	    from anls_vhcl_cntr_hstry avch
+	    where 1=1
+	    	AND (
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null
+			</if>
+			)
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	    order by reg_dt desc
+	    <if test="searchType != null and searchType == 'list'">
+	    LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+	    </if>
+	</select>
+	
+    <!-- 알림 수신관리 - 수신자 목록건수 -->
+	<select id="selectConnectorStatusListCnt">
+		select 
+	    	count(*)
+	    from anls_vhcl_cntr_hstry 
+	    where 1=1
+	    	AND (
+	    	<if test="authOwnrList != null and authOwnrList.size() > 0">
+    	         ownr_nm IN
+    	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+    	            #{ownr}
+    	        </foreach>
+    	    </if>
+    	    <if test="dataFilter == 'all'">
+				or ownr_nm is null
+			</if>
+			)
+    	    <if test="ownrNm != null and ownrNm != ''">
+    	    	<choose>
+	    	    	<when test="ownrNm != 'all'">
+	    	    	and ownr_nm = #{ownrNm}
+	    	    	</when>
+    	    	</choose>
+    	    </if>
+	</select>
+</mapper>

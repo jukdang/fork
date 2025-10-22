@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+		        	<div class="tit_wrap">
+	                	<h1 th:text="${pageInfo.pageTitle}"></h1>
+	                </div>
+
+	               	<div class="wh_box">
+                        <div class="tbl_box scrollBar">
+                            <table class="tbl02">
+                                <caption style="visibility:hidden">회원 목록 - 선택, 번호, 아이디, 이름, 이메일, 권한, 관리 표시하는 테이블</caption>
+                                <thead>
+                                    <tr>
+                                        <th class="w5p">
+                                            <input type="checkbox" id="selectAll">
+                                        </th>
+                                        <th class="w8p">No</th>
+                                        <th class="w20p">운수회사</th>
+                                        <th>전화번호</th>
+                                        <th>차량 진단 알림</th>
+                                        <th>AI 리포트 알림</th>
+                                        <th class="w16p">등록자</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataArea">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    
+      	            <div class="btn_area jfright">
+      	            	<button type="button" class="btn mid bd_red">삭제</button>
+      	            	<a class="btn mid scolor" th:href="@{/mngr/alertReceptionInsertForm}">등록</a>
+	                </div>
+	                
+	                                    	<!-- 삭제, 적용 팝업 -->
+                   	<div class="pop_wrap" id="popWrap" style="display: none;">
+				        <div class="pop_cont pop_layer">
+				            <div class="pop_head">
+				                <span>알림</span>
+				            </div>
+				            <div class="pop_body">
+				                <div class="pop_alert"><h3>삭제 하시겠습니까?</h3></div>
+				                <div class="tac">
+				                    <button id="cancel" class="btn mid grey mr8">취소</button>
+				                    <button id="confirm" class="btn mid blue">확인</button>
+				                </div>
+				            </div>
+				        </div>
+				    </div>
+	            </div>
+	            
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+<script>
+$(document).ready(function() {
+	getDataList();
+	$("#searchBtn").on("click", function() {
+		getDataList();
+	});
+	
+// 	$('#dataArea').on('click', 'tr', function() {
+//         // 클릭된 li의 data-vhcl-sn 값 가져오기
+//         var oprtrId = $(this).data('oprtr-id');
+//         window.location.href = contextPath + `/mngr/rfidOprtrUpdateForm?oprtrId=${oprtrId}`;
+//     });
+	
+	
+    // 전체선택 체크박스 이벤트
+    $('#selectAll').on('change', function() {
+        var isChecked = $(this).is(':checked');
+        $('input[name="selectedSn"]').prop('checked', isChecked);
+    });
+    // 삭제 버튼 클릭 이벤트
+    $('.btn.bd_red').on('click', function(e) {
+        e.preventDefault();
+        var checkedItems = $('input[name="selectedSn"]:checked');
+        if(checkedItems.length === 0) {
+            alert('삭제할 항목을 선택해주세요.');
+            return;
+        }
+        $('#popWrap').show();
+    });
+
+    // 삭제 확인 버튼
+    $('#confirm').on('click', function() {
+        deleteSelectedFiles();
+        $('#popWrap').hide();
+    });
+
+    // 삭제 취소 버튼
+    $('#cancel').on('click', function() {
+        $('#popWrap').hide();
+    });
+});
+
+function getDataList(){
+    customFetch({
+        url: '/mngr/getRecipientList',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        onSuccess: (response) => {
+        	console.log(response)
+            var html = '';
+            if (response && response.data && response.data.list) {
+	            var list = response.data.list;
+	            var listCnt = 0;
+	            if(list.length > 0){
+	            	list.forEach(function(item, index) {
+		            	listCnt += 1;
+		            	let chckRcptnYn = (item.chckRcptnYn === 'Y') ? 'O' : '';
+		            	let aiRptRcptnYn = (item.aiRptRcptnYn === 'Y') ? 'O' : '';
+		            	html += `<tr data-rcvr-sn="${item.rcvrSn}" tabindex="0">
+				            		<td class="listtd checkbox-td">
+		                               <input type="checkbox" name="selectedSn" value="${item.rcvrSn}">
+		                           	</td>
+					            	<td>${listCnt}</td>
+									<td>${item.ownrNm}</td>
+									<td class="update-rcvr">${item.telno}</td>
+									<td>${chckRcptnYn}</td>
+									<td>${aiRptRcptnYn}</td>
+									<td>${item.mbrId}</td>
+								</tr>`;
+	            	});
+					$("#dataArea").html(html);
+	            }else{
+	            	html += `<tr>
+								<td colspan="7">조회결과가 없습니다.</td>
+							</tr>`;
+	            	$("#dataArea").html(html);
+	            }
+            }
+        },
+        onError: (error) => console.error('에러:', error)
+    });
+}
+
+function deleteSelectedFiles() {
+    var selectedSn = [];
+    $('input[name="selectedSn"]:checked').each(function() {
+    	selectedSn.push($(this).val());
+    });
+
+    customFetch({
+        url: '/mngr/deleteRecipientList',
+        method: 'POST',
+        params: {
+        	selectedSn: selectedSn
+        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        onSuccess: (response) => {
+            alert('삭제가 완료되었습니다.');
+            getDataList();
+        },
+        onError: (error) => {
+            alert('삭제 중 오류가 발생했습니다.');
+            console.error('에러:', error);
+        }
+    });
+}
+
+$('#dataArea').on('click', '.update-rcvr', function(e) {
+       e.preventDefault();
+       e.stopPropagation(); // 이벤트 버블링 방지
+       
+       // 클릭된 파일명의 data-file-sn 값 가져오기
+       var rcvrSn = $(this).closest('tr').data('rcvr-sn');
+       if(rcvrSn) {
+    	   window.location.href = contextPath + `/mngr/alertReceptionUpdateForm?rcvrSn=${rcvrSn}`;
+       }
+   });
+</script>   
+</body>
+</html>

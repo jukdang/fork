@@ -1,0 +1,92 @@
+package egovframework.theimc.dashboard.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.egovframe.rte.fdl.cmmn.EgovAbstractServiceImpl;
+import org.egovframe.rte.psl.dataaccess.util.EgovMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import egovframework.theimc.dashboard.service.DashboardService;
+import egovframework.theimc.vehicle.service.impl.DiagnosisRealtimeMapper;
+import egovframework.theimc.vehicle.service.impl.VehicleMapper;
+
+@Service
+public clasextends Egovs DashboardServiceImpl AbstractServiceImpl implements DashboardService {
+	
+	
+	@Autowired
+    private DashboardMapper dashboardMapper;
+
+	@Autowired
+    private VehicleMapper vehicleMapper;
+	
+	@Autowired
+    private DiagnosisRealtimeMapper diagnosisRealtimeMapper;
+	 /**
+	  * 대시보드 - 금일 운행현황 - 현재 운행 차량
+	  */
+	public EgovMap selectOprVhclCnt(HashMap<String, Object> requestMap) throws Exception {
+		EgovMap vhclCnt = dashboardMapper.selectOprVhclCnt(requestMap);
+		EgovMap vhclStatusCnt = dashboardMapper.selectOprVhclStatusCnt(requestMap);
+		
+		EgovMap resultMap = new EgovMap();
+		resultMap.put("vhclCnt", vhclCnt);
+		resultMap.put("vhclStatusCnt", vhclStatusCnt);
+	    return resultMap;
+	}
+	
+	/**
+	 * 대시보드 - 차량 실시간 위치
+	 */
+	@Override
+	public EgovMap selectLatestGpsCoordinates(HashMap<String, Object> requestMap) throws Exception {
+		List<EgovMap> resultList = dashboardMapper.selectLatestGpsCoordinates(requestMap);
+		
+		EgovMap resultMap = new EgovMap();
+		resultMap.put("list", resultList);
+	    return resultMap;
+	}
+	
+	/**
+	  * 대시보드 - 운행현황 추이
+	  */
+	public EgovMap selectOprStatusTrend(HashMap<String, Object> requestMap) throws Exception {
+		List<EgovMap> resultList = dashboardMapper.selectOprStatusTrend(requestMap);
+		
+		EgovMap resultMap = new EgovMap();
+		resultMap.put("list", resultList);
+	    return resultMap;
+	}
+	
+	/**
+	  * 대시보드 - 차량 정보
+	  */
+	public EgovMap selectVhclInfo(HashMap<String, Object> requestMap) throws Exception {
+		requestMap.put("firstIndex", 1);
+		requestMap.put("recordCountPerPage", 9999);
+		requestMap.put("stts", "all");
+		requestMap.put("regNoInput", "all");
+		List<EgovMap> vhclInfo = vehicleMapper.selectVehicleHist(requestMap);
+		List<EgovMap> vhclSttsInfo = diagnosisRealtimeMapper.selectVehicleSttsList(requestMap);
+		List<EgovMap> vhclOprInfo = dashboardMapper.selectVhclOprInfo(requestMap);
+		EgovMap resultMap = new EgovMap();
+		resultMap.put("vhclInfo", vhclInfo);
+		resultMap.put("vhclSttsInfo", vhclSttsInfo);
+		resultMap.put("vhclOprInfo", vhclOprInfo);
+	    return resultMap;
+	}
+
+	/**
+	 * 대시보드 - 서비스 이용현황
+	 */
+	@Override
+	public EgovMap selectServiceUsageStatusByUsers(HashMap<String, Object> requestMap) throws Exception {
+		List<EgovMap> resultList = dashboardMapper.selectServiceUsageStatusByUsers(requestMap);
+		
+		EgovMap resultMap = new EgovMap();
+		resultMap.put("list", resultList);
+	    return resultMap;
+	}
+}

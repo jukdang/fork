@@ -1,0 +1,52 @@
+<!-- 공통 head 요소 : S -->
+<th:block th:fragment="head-common">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--     <meta http-equiv="Content-Security-Policy" content="default-src 'self';"> -->
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <link id="contextPathHolder" th:data-contextPath="${#httpServletRequest.getContextPath()}" rel="alternate" href="#">
+    <title th:text="${pageInfo?.pageTitle ?: '페이지'}"></title>
+
+    <!-- 공통 JS -->
+    <script th:src="@{/js/egovframework/jquery-3.6.1.min.js}"></script>
+    <script th:src="@{/js/egovframework/confirm.js}"></script>
+    <script th:src="@{/js/egovframework/csrf-common.js}"></script>
+    <script th:src="@{/js/egovframework/customLoading.js}"></script>
+    <script th:src="@{/js/egovframework/customFetch.js}"></script>
+    <script th:src="@{/js/egovframework/common.js}"></script>
+    <script th:src="@{/js/egovframework/dayjs/dayjs.min.js}"></script>
+    <!-- amChart 5 -->
+	<script th:src="@{/js/egovframework/amcharts5/index.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/xy.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/hierarchy.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/map.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/geodata/countries2.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/percent.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/themes/Animated.js}"></script>
+	<script th:src="@{/js/egovframework/amcharts5/plugins/exporting.js}"></script>
+	<script>am5.addLicense("AM5C307906479");</script>
+	<script>am5.addLicense("AM5M307906479");</script>
+</th:block>
+<!-- 공통 head 요소 : E -->
+
+<!-- 일반페이지 : S -->
+<th:block th:fragment="head">
+    <th:block th:replace="this :: head-common"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/egovframework/css.css}">
+</th:block>
+<!-- 일반페이지 : E -->
+
+<!-- 대시보드 : S -->
+<th:block th:fragment="head-dashboard">
+    <th:block th:replace="this :: head-common"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/egovframework/dashboard-css.css}">
+</th:block>
+<!-- 대시보드 : E -->
+
+<!-- 관리자페이지 : S -->
+<th:block th:fragment="head-admin">
+    <th:block th:replace="this :: head-common"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/egovframework/admin-css.css}">
+</th:block>
+<!-- 관리자페이지 : E -->

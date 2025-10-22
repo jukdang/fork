@@ -1,0 +1,81 @@
+@charset "utf-8";
+
+/* 팝업 : S */
+
+/* 공통 팝업 딤처리 */
+.popup_dim { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: none; background: rgba(0, 0, 0, 0.2); z-index: 9999; }
+
+/* 팝업 레이어 */
+.popup_wrap { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; display: none; min-width: 500px;  box-shadow: 0px 3px 15px rgba(199, 199, 199, 0.2); }
+.popup_wrap .tbl01 { min-width: 420px; }
+.popup_header { position: relative; padding: 14px; border-radius: 8px 8px 0 0 ;background: linear-gradient(to right, #669aea, #1a49b4); text-align: center; }
+.popup_header span { color: #fff; font-weight: 500; font-size: 21px; }
+.popup_body { max-height: 60dvh; padding: 20px 20px 26px; border-radius: 0 0 8px 8px; background: #fff; overflow: auto; }
+.popup_close { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); padding: 5px 7px 4px; background: #073291; border-radius: 100%; opacity: 0.7; }
+.popup_close:hover { opacity: 1; }
+.popup_close i { color: rgba(255,255,255,0.8); font-size: 19px; }
+.popup_list { display: flex; gap: 16px; margin-bottom: 16px; }
+.popup_list dl { display: flex; align-items: center; gap: 10px; }
+.popup_list dt::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 8px; background: #999; border-radius: 100%; }
+.popup_list dt { display: flex; justify-content: center; align-items: center; font-weight: 500; font-size: 19px; }
+.popup_list dd { font-size: 18px; }
+.popup_cont_none { padding: 10px 0; color: #555; text-align: center; font-size: 18px; line-height: 26px; }
+
+.popup_wrap.type_footer .popup_footer { background: #fff; text-align: center; padding: 0px 0 20px; border-radius: 0 0 8px 8px; margin-top: -1px; }
+.popup_wrap.type_footer .popup_body { border-radius: 0; }
+
+.popup_wrap .tbl01 tr th span { display: block; }
+
+/* 진단스캐너 필터 팝업 */
+.popup_checkbox_area { display: flex; gap: 16px; justify-content: flex-end; margin-bottom: 12px; }
+.popup_wrap .sensor_list .list { display: flex; }
+.popup_wrap .sensor_list .list:first-of-type .list_tit { border-top: none; }
+.popup_wrap .sensor_list .list:last-of-type .desc { border-bottom: 1px solid #ddd; }
+.popup_wrap .sensor_list .list .list_tit { justify-content: center; min-width: 100px; width: unset; border-radius: 0; border-top: 1px solid #b3bec5; }
+.popup_wrap .sensor_list .list .desc { flex: 1; gap: 6px 10px; border-radius: 0; border-left: none; border-bottom: none; }
+.popup_wrap .sensor_list .list .desc label { color: #555; font-weight: 400; font-size: 17px; }
+
+/* 팝업 : E */
+
+
+/* Tablet */
+@media screen and (max-width: 1023px){
+
+	
+	}
+	
+/* Tablet */
+@media screen and (max-width: 839px){
+	
+	/* 팝업 */
+	.popup_wrap { min-width: 80%; width: 80%; }
+	.popup_header span { font-size: 19px; }
+	.popup_cont_none { padding: 6px 0; font-size: 17px; line-height: 24px; }
+	.popup_list { flex-direction: column; gap: 8px; margin-bottom: 14px; }
+	.popup_list dt { font-size: 17px; }
+	.popup_list dd { font-size: 16px; }
+	.popup_close i { font-size: 16px; }
+	
+	/* 진단스캐너 필터 팝업 */
+	.popup_checkbox_area { margin-bottom: 10px; }
+	.popup_wrap .sensor_list .list .list_tit { min-width: 80px; }
+	.popup_wrap .sensor_list .list .desc label { font-size: 16px; }
+
+	}
+	
+/* Mobile */
+@media screen and (max-width: 480px){
+	
+	/* 팝업 */
+	.popup_wrap { min-width: 90%; width: 90%; }
+	.popup_header { padding: 12px; border-radius: 6px 6px 0 0; }
+	.popup_header span { font-size: 18px; }
+	.popup_body { padding: 16px; border-radius: 0 0 6px 6px; }
+	.popup_list { gap: 6px; margin-bottom: 12px; }
+	.popup_close { right: 12px; padding: 4px 6px 2px; }
+	.popup_cont_none { padding: 4px 0; font-size: 16px; line-height: 22px; }
+	
+	.popup_wrap .tbl01 tr th { font-size: 16px; }
+	.popup_wrap .tbl01 tr td { font-size: 15px; }
+	
+	}

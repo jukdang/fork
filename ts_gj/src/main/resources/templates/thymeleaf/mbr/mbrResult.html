@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+    <meta charset="UTF-8">
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    	<!-- 상단 헤더 -->
+    	<th:block th:replace="/layout/header :: top-menu"></th:block>
+	
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar noside_cont">
+			<div class="contents member_wrap">
+		    	<section>
+				    <div class="wh_box">
+					    <!-- 회원가입 완료 : S -->
+						<div class="join_finish">
+			        		<span>
+			        			<i class="fa-solid fa-check"></i>
+			        		</span>
+			        		<b>회원가입이 완료되었습니다.</b>
+			        		<p>로그인 후 서비스를 이용하실 수 있습니다.</p>
+				        	<div class="form_btnarea">
+				               	<a th:href="@{/login/loginForm}" class="btn lg mcolor">로그인</a>
+				            </div>
+		            	</div>
+		            </div>
+	            </section>
+	        </div>
+	        <!-- 회원가입 완료 : E -->
+		    <!-- 푸터 -->
+    		<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+</body>
+</html>

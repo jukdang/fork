@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <th:block th:replace="/layout/head :: head-admin"></th:block>
+    <script th:inline="javascript">
+        var contextPath = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+        
+        // 수정 페이지로 이동
+        function goToEdit(sn) {
+            location.href = "/mngr/bbs/bbsUpdateForm?sn=" + sn;
+        }
+        
+        // 파일 다운로드
+        function downloadFile(sn) {
+            location.href = "/bbs/downloadFile?fileSn=" + sn;
+        }
+    </script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap admin" id="wrap">
+	<!-- 상단 메뉴 -->
+    <th:block th:replace="/layout/header :: left-menu-admin"></th:block>
+	    
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar">
+			<!-- 메인 컨텐츠 -->
+		    <div class="contents board">
+		        <div class="wrapper">
+		            <div class="tit_wrap" th:switch="${board.ctgry}">
+		                <h1 th:case="'ntc'">게시물 미리보기</h1>
+		                <h1 th:case="*">게시물</h1>
+		            </div>
+		            <section class="board_view">
+		                <div class="wh_box">
+		                    <div class="view_tit">
+		                        <div class="board_view_head">
+		                        	<!-- 제목 -->
+									<div><!-- 중요 표시 -->
+			                            <!-- <span class="important" th:if="${board.imptYn == 'Y'}"><i class="fa-solid fa-bullhorn"></i> 중요</span> -->
+			                            <!-- 카테고리 표시 -->
+		                           		<h3><span class="board_cate" th:if="${board.ctgry == 'ntc'}">공지사항</span><strong th:text="${board.ttl}"></strong></h3>
+		                            </div>
+									<dl>
+		                                   <dt class="tit">등록자</dt>
+		                                   <dd class="txt" th:text="${board.regId}"></dd>
+		                                   <dt class="tit">등록일</dt>
+		                                   <dd class="txt" th:text="${#dates.format(board.regDt, 'yyyy-MM-dd')}"></dd>
+		                                   <dt class="tit">조회수</dt>
+		                                   <dd class="txt" th:text="${board.inqCnt}"></dd>
+		                                <!-- <li th:if="${board.popupPstgYn == 'Y'}">
+		                                    <span class="tit">팝업공지</span>
+		                                    <span class="txt">
+		                                        <span th:text="${#dates.format(board.popupBgngDt, 'yyyy-MM-dd')}"></span> ~ 
+		                                        <span th:text="${#dates.format(board.popupEnDt, 'yyyy-MM-dd')}"></span>
+		                                    </span>
+		                                </li> -->
+		                            </dl>
+		                        </div>
+		                    </div>
+		                    
+		                    <!-- 내용 영역 -->
+		                    <div class="board_content">
+		                        <!-- 내용 (HTML 태그 허용) -->
+		                        <div th:utext="${board.cn}"></div>
+		                    </div>
+		                    
+		                     <!-- 첨부파일 영역 -->
+		                    <dl class="file_detail" th:if="${not #lists.isEmpty(fileList)}">
+		                        <dt>첨부파일</dt>
+		                        <dd class="file_list">
+		                            <p th:each="file : ${fileList}">
+		                                <a href="javascript:void(0)" th:onclick="downloadFile([[${file.sn}]])">
+		                                    <i class="fa-solid fa-paperclip"></i>
+		                                    <span th:text="${file.originalFileNm}"></span>
+		                                    <span>[<em th:text="${#numbers.formatDecimal(file.fileSize / 1024, 0, 1)} + ' KB'"></em>]</span>
+		                                </a>
+		                            </p>
+		                        </dd>
+		                    </dl>
+		                </div>
+		                
+		                <!-- 버튼 영역 -->
+		                <div class="button_area">
+		                   <!-- <a href="javascript:void(0)" class="btn sm" onclick="goToList()">목록</a> -->
+		                   <a href="javascript:void(0)" class="btn mid scolor" th:onclick="goToEdit([[${board.sn}]])">수정</a>
+		                   <a class="btn mid mcolor" href="javascript:history.back()">목록</a>
+		                </div>
+		            </section>
+		        </div>
+		    </div>
+    
+		    <!-- 푸터 -->
+	    	<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+</body>
+</html>

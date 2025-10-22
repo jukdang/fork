@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+	                <div class="tit_wrap">
+                    	<div class="stit_wrap type02">
+                        	<h1 th:text="${pageInfo.pageTitle}"></h1>
+                        </div>
+						<!-- 검색 폼과 페이징을 위한 폼 -->
+                        <div class="top_right_area">
+						<div class="top_select">
+							<label>운수회사</label>
+							<div th:replace="/common/ownrSelect :: mngr-select"></div>
+	                              <button type="button" class="btn mid blue" onclick="getDataList(1);">검색</button>
+                            </div>
+                            <a id="downloadPage" class="btn sm scolor" onclick="fn_download();">다운로드</a>
+                        </div>
+                    </div>
+                    <div class="col01">
+                    	<div class="wh_box">
+	                    	<div class="tbl_box scrollBar">
+	                            <table class="tbl02 none_hover">
+	                                <thead>
+	                                    <tr>
+	                                    	<th class="w10p">No</th>
+	                                        <th>차량번호</th>
+	                                        <th>운수회사</th>
+	                                        <th>마지막 데이터 수신</th>
+	                                        <th>경과시간</th>
+	                                    </tr>
+	                                </thead>
+	                                <tbody id="dataArea">
+	                                </tbody>
+	                            </table>
+	                        </div>
+                        </div>
+                        <div class="paging" id="paging">
+                    	</div>
+                    </div>
+	            </div>
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+<script>
+$(document).ready(function() {
+	getDataList(1);
+	$("#searchBtn").on("click", function() {
+		getDataList(1);
+	});
+});
+
+function getDataList(pageIndex = 1){
+    var ownrNm = $("#ownrSelect").val();
+    var startDt = $("#startDt").val();
+    var endDt = $("#endDt").val();
+    
+    customFetch({
+        url: '/mngr/getConnectorStatusList',
+        method: 'POST',
+        params: {
+            pageIndex : pageIndex,
+            searchType: 'list',
+            ownrNm : ownrNm,
+//             startDt : startDt,
+//             endDt : endDt
+        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        onSuccess: (response) => {
+            var html = '';
+            if (response && response.data && response.data.list) {
+                var list = response.data.list;
+                const paginationInfo = response.data.paginationInfo;
+//                 $("#totalCnt").text(paginationInfo.totalRecordCount);
+                if(list.length > 0){
+                    list.forEach(function(item, index) {
+                        const rowNumber = (paginationInfo.totalRecordCount || 0) -
+                            ((paginationInfo.currentPageNo - 1) * (paginationInfo.recordCountPerPage || 10)) - index;
+                        
+                        // dayjs를 사용해서 날짜 형식 변경
+                        const formattedCntrEndDate = dayjs(item.cntrEndDt).format('YYYY-MM-DD HH:mm:ss');
+                        const formattedDate = dayjs(item.regDt).format('YYYY-MM-DD HH:mm:ss');
+                        const daysFromToday = dayjs().diff(dayjs(item.cntrEndDt), 'hour');
+                        html += `<tr>
+                            <td>${rowNumber}</td>
+                            <td>${item.regNo}</td>
+                            <td>${item.ownrNm}</td>
+                            <td>${formattedCntrEndDate}</td>
+                            <td>${daysFromToday}</td>
+                        </tr>`;
+                    });
+                    
+                    if (typeof setPagination === 'function') {
+                        setPagination('paging', 'getDataList', response.data.paginationInfo);
+                    }
+                    $("#dataArea").html(html);
+                } else {
+                    html += `<tr>
+                        <td colspan="5">조회결과가 없습니다.</td>
+                    </tr>`;
+                    $("#dataArea").html(html);
+                    setPagination('paging', 'getDataList', response.data.paginationInfo);
+                }
+                
+            }
+        },
+        onError: (error) => console.error('에러:', error)
+    });
+}
+
+// Excel 다운로드 함수
+function fn_download() {
+	var ownrNm = $("#ownrSelect").val();
+    
+    try {
+        customFetch({
+            url: '/mngr/connectorStatusDownload',
+            method: 'POST',
+            params: {
+                searchType: 'download',
+                ownrNm : ownrNm
+            },
+            responseType: 'blob',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            onSuccess: (blob) => {
+                // 이제 blob을 바로 사용 가능
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                const now = new Date();
+                const dateStr = now.getFullYear() + 
+                               String(now.getMonth() + 1).padStart(2, '0') + 
+                               String(now.getDate()).padStart(2, '0') + '_' +
+                               String(now.getHours()).padStart(2, '0') + 
+                               String(now.getMinutes()).padStart(2, '0') + 
+                               String(now.getSeconds()).padStart(2, '0');
+                
+                a.download = `단말기현황_${dateStr}.xlsx`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            },
+            onError: (error) => {
+                console.error('다운로드 오류:', error);
+            }
+        });
+    } catch (error) {
+        console.error('다운로드 오류:', error);
+    }
+}
+</script>
+</body>
+</html>

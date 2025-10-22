@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="/layout/head :: head-admin"></th:block>
+    <link href="/summernote-0.8.18-dist/summernote-lite.css" rel="stylesheet">
+    <script src="/summernote-0.8.18-dist/summernote-lite.js"></script>
+    <script src="/summernote-0.8.18-dist/lang/summernote-ko-KR.js"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap admin" id="wrap">
+	    <!-- 상단 메뉴 -->
+   		<th:block th:replace="/layout/header :: left-menu-admin"></th:block>
+    
+	   	<!-- container : S -->
+		<div id="container" class="scrollBar">
+		    <!-- 메인 컨텐츠 -->
+		    <div class="contents notice_admin">
+		        <div class="wrapper">
+		            <div class="tit_wrap">
+		                <h1 th:text="${pageInfo.pageTitle}">게시물 등록</h1>
+		            </div>
+		            <section class="board_list notice">
+		                <div class="wh_box">
+		                    <form id="mainForm" method="post" th:action="@{/mngr/bbs/bbsUpdate}" enctype="multipart/form-data">
+		                        <input type="hidden" name="ctgry" th:value="${pageInfo.ctgry}"/>
+		                        <input type="hidden" name="sn" th:value="${result.sn}"/>
+		                        <div>
+		                            <dl>
+		                                <dt>구분</dt>
+		                                <dd>
+		                                    <label class="mr10">
+		                                        <input type="checkbox" name="imptYn" value="Y" th:checked="${result != null && result.imptYn == 'Y'}"/>
+		                                        중요
+		                                    </label>
+		                                    <label>
+		                                        <input type="checkbox" id="popupNotice" name="popupPstgYn" value="Y" th:checked="${result != null && result.popupPstgYn == 'Y'}"/>
+		                                        팝업공지
+		                                    </label>
+		                                </dd>
+		                            </dl>
+		                            <dl class="popup-dates" style="display: none;">
+		                                <dt>공지기간</dt>
+		                                <dd class="top_date">
+		                                    <label>
+		                                        <input type="date" name="popupBgngDt"/>
+		                                    </label>
+		                                    ~
+		                                    <label>
+		                                        <input type="date" name="popupEnDt"/>
+		                                    </label>
+		                                </dd>
+		                            </dl>
+		                        </div>
+		                        <div>
+		                            <dl>
+		                                <dt>제목</dt>
+		                                <dd>
+		                                    <input type="text" class="bbs_title" id="bbsTitle" name="ttl" th:if="${result != null}" th:value="${result.ttl}"/>
+		                                </dd>
+		                            </dl>
+		                        </div>
+		                        <div class="file_upload">
+		                            <dl>
+		                                <dt>첨부파일 업로드</dt>
+		                                <dd>
+		                                    <div class="drop_area" id="drop-area">
+		                                        <p>파일을 여기에 끌어다 놓거나, 클릭하여 선택하세요.</p>
+		                                        <button type="button" class="btn_upload btn sm">
+		                                            <i class="fa-solid fa-arrow-up-from-bracket"></i>파일 선택
+		                                        </button>
+		                                    </div>
+		                                    <div class="file_detail" id="fileListTable">
+		                                        <th:block th:if="${fileList != null}" th:each="file : ${fileList}">
+		                                            <p>
+		                                                <i class="fa-solid fa-paperclip"></i>
+		                                                <a th:href="@{/bbs/downloadFile(fileSn=${file.sn})}" th:text="${file.originalFileNm}"></a>
+		                                                <button type="button" th:attr="data-sn=${file.sn}" onclick="removeFileFromList(this, this.getAttribute('data-sn'))">
+														    <i class="fa-solid fa-xmark"></i>
+														</button>
+		                                            </p>
+		                                        </th:block>
+		                                    </div>
+		                                </dd>
+		                            </dl>
+		                        </div>
+		                        <div class="write_area">
+		                            <textarea name="cn" id="summernote" maxlength="100000">
+		                                [[${result != null ? result.cn : ''}]]
+		                            </textarea>
+		                        </div>
+		                        <div>
+		                            <button class="btn mid white" id="previewButton" type="button">팝업 미리보기</button>
+		                        </div>
+		                        <input type="hidden" name="regId" th:value="${#authentication.name}"/>
+		                        <input type="hidden" name="mdfcnId" th:value="${#authentication.name}"/>
+		                        <input type="file" id="tmpUploadFile" name="uploadFile" style="display:none;">
+		                    </form>
+		                </div>
+		                <div class="button_area">
+		                	<a href="javascript:void(0)" id="deleteButton" class="btn mid bd_red">삭제</a>
+		                	<button class="btn mid scolor" id="svBtn" type="button">저장</button>
+		                   	<a class="btn mid mcolor" id="bbsList" th:href="@{/mngr/bbs/bbsList(ctgry=${param.ctgry})}">목록</a>
+		                </div>
+		            </section>
+		        </div>
+		    </div>
+		
+		    <div id="previewModal" class="popup preview">
+		        <div class="popup-header">
+		            <h2 id="previewTitle">미리보기</h2>
+		        </div>
+		        <div class="popup-body scrollBar">
+		            <div class="previewContent" id="previewContent"></div>
+		        </div>
+		        <div class="popup-footer">
+		            <a class="close-popup" id="hideModalButton">닫기 <i class="fa-solid fa-xmark"></i></a>
+		        </div>
+		    </div>
+		
+		    <!-- 푸터 -->
+	    	<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+		    
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+		
+		    <script>
+		        $(document).ready(function() {
+		            let dropArea = document.getElementById('drop-area');
+		            let fileList = document.getElementById('fileListTable');
+		
+		            // 드래그 앤 드롭 이벤트 처리
+		            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+		                dropArea.addEventListener(eventName, preventDefaults, false);
+		            });
+		
+		            function preventDefaults(e) {
+		                e.preventDefault();
+		                e.stopPropagation();
+		            }
+		
+		            ['dragenter', 'dragover'].forEach(eventName => {
+		                dropArea.addEventListener(eventName, highlight, false);
+		            });
+		
+		            ['dragleave', 'drop'].forEach(eventName => {
+		                dropArea.addEventListener(eventName, unhighlight, false);
+		            });
+		
+		            function highlight(e) {
+		                dropArea.classList.add('highlight');
+		            }
+		
+		            function unhighlight(e) {
+		                dropArea.classList.remove('highlight');
+		            }
+		
+		            dropArea.addEventListener('drop', handleDrop, false);
+		
+		            function handleDrop(e) {
+		                let dt = e.dataTransfer;
+		                let files = dt.files;
+		                handleFiles(files);
+		            }
+		
+		            dropArea.addEventListener('click', () => {
+		                let fileInput = document.createElement('input');
+		                fileInput.type = 'file';
+		                fileInput.multiple = true;
+		                fileInput.style.display = 'none';
+		                fileInput.addEventListener('change', function() {
+		                    handleFiles(this.files);
+		                });
+		                document.body.appendChild(fileInput);
+		                fileInput.click();
+		                document.body.removeChild(fileInput);
+		            });
+		
+		            let fileIndex = 1;
+		            
+		            function handleFiles(files) {
+		                // 기존의 동적으로 추가된 file input 제거
+		                $('#tmpUploadFile').remove();
+		                // FileList 객체로 변환하여 할당
+		                let container = new DataTransfer();
+		
+		                ([...files]).forEach((file, index) => {
+		                    const forbiddenExtensions = ['exe', 'bat', 'cmd', 'sh', 'js', 'php', 'dll', 'o', 'so', 'html'];
+		                    let fileExtension = file.name.split('.').pop().toLowerCase();
+		
+		                    let pTag = document.createElement('p');
+		
+		                    // 파일 이름을 클릭 시 다운로드할 수 있도록 a 태그 생성
+		                    let icon = document.createElement('i');
+		                    icon.classList.add('fa-solid', 'fa-paperclip'); // 아이콘 추가
+		                    pTag.appendChild(icon);
+		
+		                    let a = document.createElement('a');
+		                    a.textContent = file.name; // 파일 이름 설정
+		                    pTag.appendChild(a);
+		
+		                    // 삭제 버튼을 추가할 td 생성
+		                    let removeButton = document.createElement('button');
+		                    removeButton.setAttribute('type', 'button');
+		                    removeButton.setAttribute('onclick', `removeNewFile(this, 'uploadFile${fileIndex}')`);
+		                    removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>'; // 삭제 버튼
+		                    pTag.appendChild(removeButton);
+		
+		                    // 확장자 제한
+		                    if (forbiddenExtensions.includes(fileExtension)) {
+		                        alert(`'${fileExtension}' 확장자는 업로드할 수 없습니다.`);
+		                        return;
+		                    } else {
+		                        // 파일을 DataTransfer 객체에 추가
+		                        fileList.appendChild(pTag);
+		                        container.items.add(file);
+		                    }
+		                });
+		                
+		                // 모든 파일을 하나의 input에 추가
+		                let fileInput = document.createElement('input');
+		                fileInput.type = 'file';
+		                fileInput.name = 'uploadFile';
+		                fileInput.id = 'uploadFile';
+		                fileInput.classList.add('dynamicFileInput');
+		                fileInput.multiple = true;
+		                fileInput.style.display = 'none';
+		                fileInput.files = container.files;
+		
+		                document.getElementById('mainForm').appendChild(fileInput);
+		            }
+		
+		            function formatFileSize(bytes) {
+		                if(bytes < 1024) return bytes + ' bytes';
+		                else if(bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+		                else if(bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+		                else return (bytes / 1073741824).toFixed(1) + ' GB';
+		            }
+		            
+		            $('#svBtn').click(function(event) {
+		                var message = $(this).text();
+		                if (confirm(`${message} 하시겠습니까?`)) {
+		                    var form = document.getElementById("mainForm");
+		                    form.submit();
+		                }
+		            });
+		            
+		            // 위지웍 에디터 셋팅 - 썸머노트
+		            $('#summernote').summernote({
+		                height: 500,
+		                width: '100%',
+		                lang: "ko-KR",
+		                placeholder: '내용을 입력해주세요.',
+		                toolbar: [
+		                    ['fontname', ['fontname']],
+		                    ['fontsize', ['fontsize']],
+		                    ['color', ['color']],
+		                    ['style', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+		                    ['para', ['ul', 'ol', 'paragraph']],
+		                    ['height', ['height']],
+		                    ['insert', ['picture', 'link', 'table', 'hr']],
+		                    ['misc', ['undo', 'redo', 'fullscreen', 'codeview', 'help']],
+		                ],
+		                fontNames: ['Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', '맑은 고딕', '궁서', '굴림체', '굴림', '돋움체', '바탕체'],
+		                fontSizes: ['8', '9', '10', '11', '12', '14', '16', '18', '20', '22', '24', '28', '30', '36', '50', '72'],
+		            });
+		
+		            // 미리보기
+		            $('#previewButton').click(function() {
+		                var title = $('#bbsTitle').val();
+		                var content = $('#summernote').summernote('code');
+		                $('#previewTitle').html(title);
+		                $('#previewContent').html(content);
+		                $('#previewModal').show();
+		            });
+		            
+		            // 미리보기 숨김
+		            $('#hideModalButton').click(function() {
+		                $('#previewModal').hide();
+		            });
+		            
+		            // 팝업날짜 영역 컨트롤
+		            if ($('#popupNotice').is(':checked')) {
+				        $('.popup-dates').show();
+				    } else {
+				        $('.popup-dates').hide();
+				    }
+		            $('#popupNotice').change(function() {
+		                if ($(this).is(':checked')) {
+		                    $('.popup-dates').show();
+		                } else {
+		                    $('.popup-dates').hide();
+		                }
+		            });
+		        });
+		        
+		        function removeNewFile(button, fileId) {
+		            $('#'+fileId).remove();
+		            // 해당 파일의 tr 요소를 삭제
+		            let row = button.closest('p');
+		            row.parentNode.removeChild(row);
+		        }
+		        
+		        let deletedFiles = [];
+		
+		        function removeFileFromList(button, fileSn) {
+		            deletedFiles.push(fileSn);
+		
+		            let row = button.closest('p');
+		            row.parentNode.removeChild(row);
+		
+		            // 삭제된 파일 인덱스를 hidden input으로 추가
+		            $('<input>').attr({
+		                type: 'hidden',
+		                name: 'deletedFiles', // 배열 형태로 처리
+		                value: fileSn
+		            }).appendTo('#mainForm');
+		        }
+		        
+		        function removeNewFile(button, fileSn) {
+		
+		        	$('#'+fileSn).remove();
+		            // 해당 파일의 tr 요소를 삭제
+		            let row = button.closest('p');
+		            row.parentNode.removeChild(row);
+		        }
+		        
+		        function downloadFile(boardSn) {
+		            var form = document.getElementById('downloadForm');
+		            form.boardSn.value = boardSn;
+		            form.submit();
+		        }
+		        
+		      //게시물 삭제
+		        $('#deleteButton').click(function(event) {
+		            event.preventDefault(); // 기본 폼 제출 방지
+		            var message = $(this).text();
+		            customConfirm(`<h3><strong>${message}</strong> 하시겠습니까?</h3>`)
+			        .then(function(result){
+			            if (result) {
+			            	// 삭제 요청을 처리할 폼의 action 변경
+			                $('#mainForm').attr('action', '/mngr/bbs/bbsDelete');
+			                $('#mainForm').submit();
+			            } else {
+			                return;
+			            }
+			    	});
+		        });
+		    </script>
+		    
+		    
+</body>
+</html>

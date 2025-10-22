@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+		        	<div class="info_box">
+		        		<p><i class="fa-solid fa-circle-exclamation"></i>AI+ 리포트는 운수회사 내 전체 운전원을 대상으로 한 통합 분석 자료이므로, 개별 운전원에게 공유하지 않도록 유의하시기 바랍니다. </p>
+		        	</div>
+		        	
+		        	<div class="top_select_area">
+		        		<div class="date_year">
+							<button class="prev_date"><i class="fa-solid fa-angle-left"></i></button>
+								<div class="year_display">
+									<span id="year">2025</span>년
+								</div>
+							<button class="next_date"><i class="fa-solid fa-angle-right"></i></button>
+						</div>
+
+		    			<!-- 소유자 선택 -->
+                        <div th:replace="/common/ownrSelect :: aiReport-ownr-select"></div>
+
+						<!-- <button class="btn lg black btn_search" onclick="getAiReportList();">검색</button> -->
+		        	</div>
+		        	
+		        	<!-- 조회 결과 없을 경우 공통 -->
+					<div class="cont_none_wrap" style="display: none;">
+						<div class="cont_none type02">
+					 		<i class="fa-solid fa-file-circle-xmark"></i>
+					 		<p>조회 결과가 없습니다.</p>
+					 	</div>
+				 	</div>
+				 	
+		        	
+	        		<ul class="list_card" id="aiReportList">
+	        			<!-- <li>
+	        				<a class="wh_box">
+	        					<span class="list_card_tit">2025년 5월 월간 AI 리포트<em class="new_item">New</em></span><span class="list_card_date">2025.05.01 ~ 2025.05.31</span>
+	        				</a>
+	        			</li>
+	        			<li>
+	        				<a class="wh_box">
+	        					<span class="list_card_tit">2025년 6월 월간 AI 리포트</span><span class="list_card_date">2025.06.01 ~ 2025.06.30</span>
+	        				</a>
+	        			</li> -->
+	        		</ul>
+	            </div> 
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		<!-- 푸터 -->
+    	<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	
+   
+</body>
+<script>
+//defaultDate setting
+let defaultYear = dayjs().format("YYYY");
+$("#year").text(defaultYear);
+$("#year").attr("max", defaultYear);
+
+$('.prev_date').click(function() {
+	changeDay(-1); // 이전
+	getAiReportList();
+});
+
+$('.next_date').click(function() {
+	changeDay(1); // 다음
+	getAiReportList();
+});
+
+$(function() {
+    $('#ownrSelect').on('change', function() {
+    	getAiReportList();
+    });
+	getAiReportList();
+})
+
+// AI 리포트 목록 조회
+function getAiReportList(pageIndex = 1) {
+	
+	$("#aiReportList").empty();
+	
+	let startDate = $("#year").text() + `-02-01`;
+	let endDate = (parseInt($("#year").text()) + 1) + `-01-01`;
+	
+	const params = {
+		startDate: startDate,
+		endDate: endDate,
+		ownrNm: $("#ownrSelect").val(),
+		pageIndex: pageIndex
+    };
+	
+    customFetch({
+        url: '/operation/getAiReportList',
+        method: 'POST',
+        params: params,
+        loadingId: 'wrap',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        onSuccess: (response) => {
+            console.log('getAiReportList 조회 성공:', response);
+            setAiReportList(response);
+        },
+        onError: (error) => console.error('에러 발생:', error)
+    });
+    
+}
+
+// AI 리포트 목록 조회
+function setAiReportList(response) {
+	
+	const $list = $('#aiReportList');
+	
+	$list.empty();
+	
+	$(".cont_none_wrap").hide();
+	
+	if(response.code == 200) {
+		
+		var html = '';
+        if (response && response.data && response.data.list) {
+            var data = response.data.list;
+            if(data.length > 0){
+            	
+            	for(const item of data){
+            		let newYn = item.newYn;
+            		if(newYn == "Y") {
+            			newYn = `<em class="new_item">New</em>`;
+            		}else {
+            			newYn = ``;
+            		}
+            		
+            		let rptYmd = item.rptYmd;
+
+            		// 1달 빼기
+            		const prevMonth = dayjs(rptYmd).subtract(1, "month");
+
+            		const periodStart = prevMonth.startOf("month").format("YYYY.MM.DD");
+            		const periodEnd = prevMonth.endOf("month").format("YYYY.MM.DD");
+
+            		const period = `${periodStart} ~ ${periodEnd}`;
+            		
+					html += `<li onclick="goDetail('${item.anlsAiRptSn}');">
+			    				<a class="wh_box">
+									<span class="list_card_tit">${item.reportTitle}${newYn}</span><span class="list_card_date">${period}</span>
+								</a>
+							</li>`;
+            		
+            	}
+                
+               	$list.html(html);
+            	
+            }else{
+            	$(".cont_none_wrap").show();
+            }
+        }
+        
+	}
+	
+}
+
+//상세 페이지로 이동
+function goDetail(anlsAiRptSn) {
+    if (!anlsAiRptSn) {
+        console.warn('AI + 리포트 정보가 없습니다.');
+        return;
+    }
+    
+    // 상세 페이지로 이동 (실제 URL은 프로젝트에 맞게 수정)
+    window.location.href = contextPath + `/operation/aiReport?anlsAiRptSn=${anlsAiRptSn}`;
+}
+
+//이전/다음 버튼 이벤트
+function changeDay(delta) {
+    const text = $('#year');
+    const current = text.text();
+    if (!current) return;
+
+    // dayjs로 파싱
+    let date = dayjs(current);
+
+    // delta(±1) 만큼 날짜 이동
+    date = date.add(delta, 'year');
+
+    // max 속성보다 크면 리턴
+    const maxDate = dayjs($('#year').attr("max"));
+    if (date.isAfter(maxDate)) {
+        return false;
+    }
+
+    // yyyy-MM-dd 형식으로 다시 세팅
+    text.text(date.format('YYYY'));
+}
+</script>
+</html>

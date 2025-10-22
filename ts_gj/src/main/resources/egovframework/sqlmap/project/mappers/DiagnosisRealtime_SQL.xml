@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="egovframework.theimc.vehicle.service.impl.DiagnosisRealtimeMapper">
+
+	<!-- AI 실시간 진단 차량 상태 목록 -->
+	<select id="selectVehicleSttsList" resultType="egovMap">
+		SELECT vhcl_sn
+		, reg_no
+		, vhcl_type
+		, mt_id, vhcl_stts
+		, cntr_stts
+		, chck_stts
+		, chck_list
+		, CAST(AES_DECRYPT(FROM_BASE64(oprtr_nm), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4) AS oprtr_nm
+		, bkdn_cd_list
+		, scr
+		, opr_dstnc
+		FROM anls_vhcl_stts_rt
+		WHERE 1=1
+		AND use_yn = 'Y'
+		AND junk_yn = 'N'
+		AND chck_stts IN
+		<choose>
+			<when test="stts == 'danger'">('1', '2')</when>
+			<when test="stts == 'safe'">('0')</when>
+			<when test="stts == 'all'">('0','1','2')</when>
+		</choose>
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+			AND ownr_nm IN
+			<foreach collection="authOwnrList" item="ownr" open="("
+				close=")" separator=",">
+				#{ownr}
+			</foreach>
+		</if>
+		<if test="ownrNm != 'all'">
+			and ownr_nm = #{ownrNm}
+		</if>
+		<if test="regNoInput != 'all'">
+			AND reg_no LIKE CONCAT('%', #{regNoInput}, '%')
+		</if>
+		<!-- ORDER BY scr, reg_no -->
+		ORDER BY scr ASC, reg_no ASC
+	</select>
+
+	<!-- AI 실시간 진단 차량 점검 목록 -->
+	<select id="selectVehicleChkList" resultType="egovMap">
+		SELECT
+			a.vhcl_sn
+			, a.ownr_nm
+			, a.mt_id
+			, a.anls_dt
+			, a.bgng_dt
+			, a.end_dt
+			, a.chck_stts
+			, a.chck_cd
+			, c.chck_nm
+			, c.msg_cn
+		FROM anls_vhcl_chck_hstry a
+		LEFT JOIN cmm_vhcl_chck_info c
+			ON a.chck_cd = c.chck_cd
+		WHERE 1=1
+		AND vhcl_sn = #{vhclSn}
+		AND anls_dt BETWEEN CONCAT(#{searchDate}, ' 00:00:00') AND
+		CONCAT(#{searchDate}, ' 23:59:59')
+		<if test="dataFilter != 'all'">
+			and ownr_nm = #{currentOwnrNm}
+		</if>
+		ORDER BY anls_dt
+	</select>
+
+	<!-- AI 실시간 진단 차량 고장 목록 -->
+	<select id="selectVehicleBkdnList" resultType="egovMap">
+		SELECT
+			a.vhcl_sn
+			, a.ownr_nm
+			, a.sys_nm
+			, a.logger_cd
+			, a.dtc
+			, a.anls_dt
+			, a.ocrn_dt
+			, c.msg_cn
+<!-- 			, c.dtl_cn -->
+		FROM anls_vhcl_bkdn_hstry a
+		LEFT JOIN cmm_vhcl_bkdn_info c
+			ON a.sys_nm = c.sys_nm
+<!-- 			AND a.logger_cd = c.logger_cd -->
+			AND a.dtc = c.dtc
+		WHERE 1=1
+			AND a.vhcl_sn = #{vhclSn}
+			AND a.ocrn_dt BETWEEN CONCAT(#{searchDate}, ' 00:00:00') AND
+			CONCAT(#{searchDate}, ' 23:59:59')
+			<if test="dataFilter != 'all'">
+				AND a.ownr_nm = #{currentOwnrNm}
+			</if>
+		ORDER BY a.anls_dt
+	</select>
+	
+	<!-- AI 실시간 진단 차량 점검 목록 -->
+	<select id="selectChckManual" resultType="egovMap">
+		SELECT
+			chck_cd
+			, chck_nm
+			, msg_cn
+			, dtl_cn
+		FROM cmm_vhcl_chck_info
+		WHERE 1=1
+			AND chck_cd = #{chckCd}
+	</select>
+	
+		
+	<!-- AI 실시간 진단 차량 점검 목록 -->
+	<select id="selectBkDnManual" resultType="egovMap">
+		SELECT
+		sys_nm
+		, logger_cd
+		, dtc
+		, msg_cn
+		, dtl_cn
+		FROM cmm_vhcl_bkdn_info
+		WHERE 1=1
+			AND sys_nm = #{sysNm}
+<!-- 			AND logger_cd = #{loggerCd} -->
+			AND dtc = #{dtc}
+	</select>
+	
+	<!-- AI 실시간 진단 차량 상태 목록 -->
+	<select id="selectVehicleChckAlarmInfo" resultType="egovMap">
+		SELECT vhcl_sn
+		, reg_no
+		, vhcl_type
+		, mt_id, vhcl_stts
+		, cntr_stts
+		, chck_stts
+		, chck_list
+		, bkdn_cd_list
+		, scr
+		, opr_dstnc
+		, mdfcn_dt
+		FROM anls_vhcl_stts_rt
+		WHERE 1=1
+		AND use_yn = 'Y'
+		AND junk_yn = 'N'
+		AND chck_stts = 2
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+			AND ownr_nm IN
+			<foreach collection="authOwnrList" item="ownr" open="("
+				close=")" separator=",">
+				#{ownr}
+			</foreach>
+		</if>
+		ORDER BY scr asc, reg_no
+	</select>
+</mapper>

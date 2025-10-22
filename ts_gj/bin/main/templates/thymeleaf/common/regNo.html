@@ -1,0 +1,198 @@
+<!-- regNo-search : S -->
+<th:block th:fragment="regNo-search"> 
+
+<script>
+	$(document).ready(function() {
+	    let searchTimeout;
+	    let currentRequest;
+	    const $regNoInput = $('#regNoInput');
+	    const $dropdown = $('#dropdown');
+	    const debounceDelay = 300; // 300ms 디바운스
+	    
+	    // 입력 이벤트 핸들러
+	    $regNoInput.on('input', function() {
+	        const inputValue = $(this).val().trim();
+
+	        // 기존 요청 취소
+	        if (currentRequest) {
+	            currentRequest.abort();
+	        }
+	        
+	        // 기존 타이머 클리어
+	        clearTimeout(searchTimeout);
+	        
+	        // 입력값이 없으면 드롭다운 숨김
+	        if (inputValue.length === 0) {
+	            hideDropdown();
+	            return;
+	        }
+	        
+// 	        if (!/^\d+$/.test(inputValue)) {
+// 	            hideDropdown();
+// 	            return;
+// 	        }
+	        
+	        // 로딩 상태 표시
+	        showLoadingState();
+	        
+	        // 디바운스 적용하여 검색 실행
+	        searchTimeout = setTimeout(function() {
+	            searchVehicleNumbers(inputValue);
+	        }, debounceDelay);
+	    });
+	    
+	    // 차량번호 검색 함수
+	    function searchVehicleNumbers(searchTerm) {
+	    	var ownrNm = $("#ownrSelect").val() || '';
+	    	console.log(searchTerm)
+	        customFetch({
+	            url: '/vehicle/setRegNoItem',
+	            method: 'GET',
+	            params: {
+	            	regNoInput: searchTerm 
+	            	, ownrNm : ownrNm
+	            },
+	            headers: {
+	                'Content-Type': 'application/x-www-form-urlencoded'
+	            },
+	            onSuccess: function(response) {
+	            	// StatusMsg 구조에 맞춰 수정
+	            	if (response.data.list.length > 0) {
+	                    updateDropdown(response.data.list);
+	                    showDropdown();
+	                } else {
+	                    showNoResultState();
+	                }
+	            },
+	            onError: function(error) {
+	            	console.error('차량번호 검색 실패:', error);
+	                showErrorState();
+	            },
+	            onComplete: function() {
+	                currentRequest = null;
+	            }
+	        });
+	    }
+	    
+	    // 드롭다운 업데이트
+	    function updateDropdown(vehicles) {
+	        $dropdown.empty();
+	        
+	        vehicles.forEach(function(vehicle) {
+	            const $item = $('<li class="dropdown_item" tabindex="0"></li>')
+	                .text(vehicle.regNo)  // EgovMap의 regNo 필드
+	                .data('vehicle-info', vehicle);
+	            
+	            $dropdown.append($item);
+	        });
+	    }
+	    
+	    // 로딩 상태 표시
+	    function showLoadingState() {
+	        $dropdown.empty();
+	        $dropdown.append('<li class="dropdown_item">검색 중...</li>');
+	        showDropdown();
+	    }
+	    
+	    // 검색 결과 없음 표시
+	    function showNoResultState() {
+	        $dropdown.empty();
+	        $dropdown.append('<li class="dropdown_item">검색 결과가 없습니다</li>');
+	        showDropdown();
+	    }
+	    
+	    // 에러 상태 표시
+	    function showErrorState() {
+	        $dropdown.empty();
+	        $dropdown.append('<li class="dropdown_item">검색 중 오류가 발생했습니다</li>');
+	        showDropdown();
+	    }
+	    
+	    // 드롭다운 표시
+	    function showDropdown() {
+	        $dropdown.show();
+	    }
+	    
+	    // 드롭다운 숨김
+	    function hideDropdown() {
+	        $dropdown.hide();
+	    }
+	    
+	    // 드롭다운 아이템 클릭 이벤트
+	    $(document).on('click', '.dropdown_item:not(.dropdown_loading):not(.dropdown_no_result)', function(e) {
+	        e.preventDefault();
+	        e.stopPropagation();
+	        
+	        const selectedVehicle = $(this).data('vehicle-info');
+	        const vehicleNumber = $(this).text();
+	        
+	        // 입력필드에 선택된 차량번호 설정
+	        $regNoInput.val(vehicleNumber);
+	        
+	        // 커서를 끝으로 이동
+	        $regNoInput.focus();
+	        $regNoInput[0].setSelectionRange(vehicleNumber.length, vehicleNumber.length);
+	        
+	        // 드롭다운 숨김
+	        hideDropdown();
+	        
+	        // 선택 이벤트 발생 (커스텀 이벤트)
+	        $regNoInput.trigger('vehicle:selected', [selectedVehicle]);
+	    });
+	    
+	    // 외부 클릭시 드롭다운 숨김
+	    $(document).on('click', function(e) {
+	        if (!$(e.target).closest('.chat_input_area').length) {
+	            hideDropdown();
+	        }
+	    });
+	    
+	    // ESC 키로 드롭다운 숨김
+	    $(document).on('keydown', function(e) {
+	        if (e.keyCode === 27) { // ESC key
+	            hideDropdown();
+	        }
+	    });
+	    
+	    // 키보드 네비게이션 (위/아래 화살표)
+	    $regNoInput.on('keydown', function(e) {
+	        const $items = $('.dropdown_item:visible:not(.dropdown_loading):not(.dropdown_no_result)');
+	        const $current = $('.dropdown_item.selected');
+	        let index = $items.index($current);
+	        
+	        switch(e.keyCode) {
+	            case 38: // 위 화살표
+	                e.preventDefault();
+	                if ($items.length > 0) {
+	                    $items.removeClass('selected');
+	                    index = index <= 0 ? $items.length - 1 : index - 1;
+	                    $items.eq(index).addClass('selected');
+	                }
+	                break;
+	                
+	            case 40: // 아래 화살표
+	                e.preventDefault();
+	                if ($items.length > 0) {
+	                    $items.removeClass('selected');
+	                    index = index >= $items.length - 1 ? 0 : index + 1;
+	                    $items.eq(index).addClass('selected');
+	                }
+	                break;
+	                
+	            case 13: // Enter 키
+	                if ($current.length > 0) {
+	                    e.preventDefault();
+	                    $current.click();
+	                }
+	                break;
+	        }
+	    });
+	    
+	    // 텍스트 영역 높이 자동 조절
+	    $regNoInput.on("input", function () {
+	        this.style.height = "auto";
+	        this.style.height = `${this.scrollHeight}px`;
+	    });
+	});
+</script>
+</th:block>

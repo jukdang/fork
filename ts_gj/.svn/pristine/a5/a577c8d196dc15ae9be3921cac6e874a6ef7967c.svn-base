@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.theimc.operation.service.impl.AiReportMapper">
+
+    <!-- 운행행태 - AI + 리포트 목록 -->
+    <select id="selectAiReportList" resultType="egovMap">
+    	SELECT   anls_ai_rpt_sn
+			   , ownr_nm
+			   , rpt_ymd
+			   , CONCAT(DATE_FORMAT(DATE_SUB(rpt_ymd, INTERVAL 1 MONTH), '%Y년 %m월'), ' 월간 AI 리포트') AS report_title
+			   , CASE 
+			        WHEN DATEDIFF(NOW(), rpt_ymd) <![CDATA[<=]]> 7 THEN 'Y'
+			        ELSE 'N'
+			     END AS new_yn
+			   , reg_dt
+		FROM anls_ai_rpt
+		WHERE 1 = 1
+			AND rpt_ymd BETWEEN #{startDate} AND #{endDate}
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+   	        AND ownr_nm IN
+   	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+   	            #{ownr}
+   	        </foreach>
+   	    </if>
+   	    <if test="ownrNm != null and ownrNm != ''">
+   	    	<choose>
+    	    	<when test="ownrNm != 'all'">
+    	    	and ownr_nm = #{ownrNm}
+    	    	</when>
+   	    	</choose>
+   	    </if>
+   	    ORDER BY rpt_ymd DESC
+    </select>
+    
+    <!-- 운행행태 - AI + 리포트 목록 상세 -->
+    <select id="selectAiReportResult" resultType="egovMap">
+    	<!-- SELECT    anls_ai_rpt_sn
+				, ownr_nm
+				, rpt_ymd
+			    , CONCAT(DATE_FORMAT(DATE_SUB(rpt_ymd, INTERVAL 1 MONTH), '%Y년 %m월'), ' 월간 AI 리포트') AS report_title
+				, t_vhcl_cnt
+				, opr_vhcl_cnt
+				, t_oprtr_cnt
+				, opr_oprtr_cnt
+				, opr_rte_cnt
+				, ai_fuel_cost_prp
+				, fuel_cost_cn
+				, ai_opr_prp
+				, opr_cn
+				, up_oprtr_cn
+				, lwr_oprtr_cn
+				, dgr_opr_txt
+				, dgr_opr_cn
+				, ai_vhcl_opr_prp
+				, vhcl_opr_cn
+				, dgr_vhcl_cn
+				, ai_rte_prp
+				, up_rte_cn
+				, lwr_rte_cn
+				, msg_cn
+				, DATE_FORMAT(reg_dt, '%Y-%m-%d %H:%i:%s') AS reg_dt
+		FROM anls_ai_rpt -->
+		SELECT 
+		    JSON_OBJECT(
+		        'anlsAiRptSn', aar.anls_ai_rpt_sn,
+		        'ownrNm', aar.ownr_nm,
+		        'rptYmd', aar.rpt_ymd,
+		        'reportTitle', CONCAT(DATE_FORMAT(DATE_SUB(aar.rpt_ymd, INTERVAL 1 MONTH), '%Y년 %m월'), ' 월간 AI 리포트'),
+		        'tVhclCnt', aar.t_vhcl_cnt,
+		        'oprVhclCnt', aar.opr_vhcl_cnt,
+		        'tOprtrCnt', aar.t_oprtr_cnt,
+		        'oprOprtrCnt', aar.opr_oprtr_cnt,
+		        'oprRteCnt', aar.opr_rte_cnt,
+		        'aiFuelCostPrp', aar.ai_fuel_cost_prp,
+		        'fuelCostCn', JSON_EXTRACT(aar.fuel_cost_cn, '$'),
+		        'aiOprPrp', aar.ai_opr_prp,
+		        'oprCn', JSON_EXTRACT(aar.opr_cn, '$'),
+		        'upOprtrCn', IFNULL(up.json_arr, JSON_ARRAY()),
+		        'lwrOprtrCn', IFNULL(lwr.json_arr, JSON_ARRAY()),
+		        'dgrOprTxt', aar.dgr_opr_txt,
+		        'dgrOprCn', JSON_EXTRACT(aar.dgr_opr_cn, '$'),
+		        'aiVhclOprPrp', aar.ai_vhcl_opr_prp,
+		        'vhclOprCn', JSON_EXTRACT(aar.vhcl_opr_cn, '$'),
+		        'dgrVhclCn', JSON_EXTRACT(aar.dgr_vhcl_cn, '$'),
+		        'aiRtePrp', aar.ai_rte_prp,
+		        'upRteCn', JSON_EXTRACT(aar.up_rte_cn, '$'),
+		        'lwrRteCn', JSON_EXTRACT(aar.lwr_rte_cn, '$'),
+		        'msgCn', aar.msg_cn,
+		        'regDt', DATE_FORMAT(aar.reg_dt, '%Y-%m-%d %H:%i:%s')
+		    ) AS result
+	    FROM anls_ai_rpt aar
+		LEFT JOIN (
+		    SELECT anls_ai_rpt_sn,
+		           JSON_ARRAYAGG(
+		               JSON_OBJECT(
+		                   '구분', JSON_UNQUOTE(JSON_EXTRACT(up_elem, '$.구분')),
+		                   '순위', JSON_UNQUOTE(JSON_EXTRACT(up_elem, '$.순위')),
+		                   '운전원명', CAST(AES_DECRYPT(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(up_elem, '$.운전원명'))), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4),
+		                   '값', JSON_UNQUOTE(JSON_EXTRACT(up_elem, '$.값'))
+		               )
+		           ) AS json_arr
+		    FROM anls_ai_rpt
+		    CROSS JOIN JSON_TABLE(up_oprtr_cn, '$[*]' COLUMNS (
+		        NESTED PATH '$' COLUMNS (
+		            up_elem JSON PATH '$'
+		        )
+		    )) AS up_table
+		    GROUP BY anls_ai_rpt_sn
+		) up ON up.anls_ai_rpt_sn = aar.anls_ai_rpt_sn
+		LEFT JOIN (
+		    SELECT anls_ai_rpt_sn,
+		           JSON_ARRAYAGG(
+		               JSON_OBJECT(
+		                   '구분', JSON_UNQUOTE(JSON_EXTRACT(lwr_elem, '$.구분')),
+		                   '순위', JSON_UNQUOTE(JSON_EXTRACT(lwr_elem, '$.순위')),
+		                   '운전원명', CAST(AES_DECRYPT(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(lwr_elem, '$.운전원명'))), 'theimc') AS CHAR(100) CHARACTER SET UTF8MB4),
+		                   '값', JSON_UNQUOTE(JSON_EXTRACT(lwr_elem, '$.값'))
+		               )
+		           ) AS json_arr
+		    FROM anls_ai_rpt
+		    CROSS JOIN JSON_TABLE(lwr_oprtr_cn, '$[*]' COLUMNS (
+		        NESTED PATH '$' COLUMNS (
+		            lwr_elem JSON PATH '$'
+		        )
+		    )) AS lwr_table
+		    GROUP BY anls_ai_rpt_sn
+		) lwr ON lwr.anls_ai_rpt_sn = aar.anls_ai_rpt_sn
+		WHERE 1 = 1
+			AND aar.anls_ai_rpt_sn = #{anlsAiRptSn}
+		<if test="authOwnrList != null and authOwnrList.size() > 0">
+   	        AND aar.ownr_nm IN
+   	        <foreach collection="authOwnrList" item="ownr" open="(" close=")" separator=",">
+   	            #{ownr}
+   	        </foreach>
+   	    </if>
+   	    <if test="ownrNm != null and ownrNm != ''">
+   	    	<choose>
+    	    	<when test="ownrNm != 'all'">
+    	    	and aar.ownr_nm = #{ownrNm}
+    	    	</when>
+   	    	</choose>
+   	    </if>
+    </select>
+    
+</mapper>

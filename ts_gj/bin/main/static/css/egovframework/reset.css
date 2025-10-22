@@ -1,0 +1,52 @@
+@charset "utf-8";
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, font, img, ins, kbd, q, s, samp,
+small, strike, strong, submenu, sup, tt, var,
+b, u, i, center, dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, hgroup, header, footer, nav, section, gnb, lnb, snb,
+figure, figcaption
+{ margin: 0; padding: 0; border: 0; background: transparent; }
+
+a, article, aside, hgroup, header, footer, nav, section, gnb, lnb, snb, figure, figcaption
+{ display: block; }
+
+
+
+img, button, input.type-image { border: 0 none; }
+img { vertical-align: middle; border: 0 none; }
+a { display: inline-block; cursor: pointer; }
+ol, ul { display: inline-block; }
+ol, ul, li { list-style: none; vertical-align: middle; }
+blockquote, q { quotes: none; }
+ins { text-decoration: none; }
+del { text-decoration: line-through; }
+table{ border-spacing: 0; border: 0; empty-cells: show; }
+legend, caption { overflow: hidden; visibility: hidden; width: 0; height: 0; font-size: 0; line-height: 0; text-indent: -9999px; }
+address, caption, cite, code, dfn, em, strong, th, var { font-style: normal; }
+input, textarea, select { color: inherit; vertical-align: middle; font-family: inherit; font-size: inherit; font-weight: inherit; }
+select { -webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+/* IE 10, 11의 네이티브 화살표 숨기기 */
+select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+select::-ms-expand { display: none; }
+
+hr { display: none; }
+label { display: inline-block; vertical-align: middle; }
+noscript { display: none; }
+button{ overflow: visible; margin: 0; padding: 0; border: 0; vertical-align: middle; background: none; cursor: pointer; }
+button::-moz-focus-inner,
+[type="button"]::-moz-focus-inner {
+    padding: 0;
+    border: 0;
+}
+
+
+/* link */
+a, a:link, a:active, a:focus, a:hover, a:visited { text-decoration: none; }

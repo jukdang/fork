@@ -1,0 +1,51 @@
+<!-- ownr-select : S -->
+<th:block th:fragment="ownr-select"> 
+	<div class="filter_box" th:style="${dataFilter == 'all'} ? 'display: flex;' : 'display: none;'">
+	    <label for="ownrSelect">운수회사</label>
+	    <select name="ownrSelect" id="ownrSelect">
+	        <option value="all" th:if="${dataFilter == 'all'}">전체</option>
+	        <option th:each="ownr : ${authOwnrList}" 
+	                th:value="${ownr}" 
+	                th:text="${ownr}">
+	        </option>
+	    </select>
+	</div>
+</th:block>
+<th:block th:fragment="operation-status-ownr-select"> 
+	<div th:style="${dataFilter == 'all'} ? 'display: flex;' : 'display: none;'">
+	    <label for="ownrSelect">운수회사</label>
+	    <select name="ownrSelect" id="ownrSelect">
+	        <option value="all" th:if="${dataFilter == 'all'}">전체</option>
+	        <option th:each="ownr : ${authOwnrList}" 
+	                th:value="${ownr}" 
+	                th:text="${ownr}">
+	        </option>
+	    </select>
+	</div>
+</th:block> 
+<th:block th:fragment="mngr-select">
+	<div class="filter_box" th:style="${dataFilter == 'all'} ? 'display: flex;' : 'display: none;'">
+		<!-- 스크린 리더용 라벨 -->
+		<label for="ownrSelect" class="sr-only">운수회사</label>
+		<select name="ownrSelect" id="ownrSelect">
+			<option value="all" th:if="${dataFilter == 'all'}" 
+			        th:selected="${selOwnr == 'all'}">운수회사</option>
+			<option th:each="ownr : ${authOwnrList}"
+			        th:value="${ownr}"
+			        th:text="${ownr}"
+			        th:selected="${selOwnr == ownr}">
+			</option>
+		</select>
+	</div>
+</th:block>
+<th:block th:fragment="aiReport-ownr-select"> 
+	<div class="filter_box" th:style="${dataFilter == 'all'} ? 'display: flex;' : 'display: none;'">
+	    <label for="ownrSelect">운수회사</label>
+	    <select name="ownrSelect" id="ownrSelect">
+	        <option th:each="ownr : ${authOwnrList}" 
+	                th:value="${ownr}" 
+	                th:text="${ownr}">
+	        </option>
+	    </select>
+	</div>
+</th:block>

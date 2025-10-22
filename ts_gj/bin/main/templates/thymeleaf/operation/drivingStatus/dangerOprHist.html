@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/js/egovframework/leaflet/leaflet.css}">
+	<script th:src="@{/js/egovframework/leaflet/leaflet.js}"></script>
+	<script th:src="@{/js/egovframework/leaflet/leaflet-heat.js}"></script>
+	<script th:src="@{/js/egovframework/dashboard/gwangju.js}"></script>
+	<script th:src="@{/js/egovframework/design.js}"></script>
+</head>
+<body>
+<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container">
+		
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+				<div class="gis_container">
+				    <!-- 왼쪽 사이드바 -->
+				    <aside class="gis_sidebar">
+
+				    	<ul class="gis_tab">
+				    		<li><button th:onclick="|location.href='@{/operation/routeOprHist}'|">노선 운행 현황</button></li>
+				    		<li class="on"><button>위험 운행 지도</button></li>
+				    	</ul>
+
+				    	<div class="gis_sidebar_inner">
+					    	<!-- 위험 운행 지도 -->
+					    	<div class="gis_tab_content02" style="display: block">
+					    		<div class="gis_filter_wrap">
+							    	<div class="gis_filter">
+				    					<!-- 소유자 선택 -->
+							    		<div th:replace="/common/ownrSelect :: operation-status-ownr-select"></div>
+							    		<div>
+							    			<label for="ocrnDt">기간</label>
+							    			<div class="date_month">
+												<button class="prev_date"><i class="fa-solid fa-angle-left"></i></button>
+													<div class="date_display">
+														<input type="date" id="ocrnDt">
+													</div>
+												<button class="next_date"><i class="fa-solid fa-angle-right"></i></button>
+											</div>
+							    		</div>
+							    	</div>
+							    	<button class="btn lg black" onclick="getDgrCrdList();">조회</button>
+							    </div>
+							    <div>
+							    	<h3>운행행태 종류</h3>
+							    	<ul class="operation_type">
+							    		<li class="on"><a href="#">과속</a></li>
+							    		<li><a href="#">급정지</a></li>
+							    		<li><a href="#">급출발</a></li>
+							    		<li><a href="#">급감속</a></li>
+							    		<li><a href="#">급가속</a></li>
+							    	</ul>
+							    </div>
+					    	</div>
+				    	</div>
+				    </aside>
+				    <a title="닫기" href="#" class="btn_hide"><i class="fa-solid fa-angle-left"></i></a>
+				
+				    <!-- 지도 영역 -->
+				    <div class="map_area" id="map_div">
+				    	<!-- <i class="bus_marker_icon"><img th:src="@{/images/egovframework/bus_icon_g.png}" alt=""></i>
+				    	<i class="bus_marker_icon"><img th:src="@{/images/egovframework/bus_icon_r.png}"></i>
+				    	<i class="bus_stop_icon"></i> -->
+				    </div>
+				</div>
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+	    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	//defaultDate setting
+	let defaultOcrnDt = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+	$("#ocrnDt").attr("max", defaultOcrnDt);
+	$("#ocrnDt").val(defaultOcrnDt);
+	/* ---------------------------------- leafLet Start ---------------------------------- */
+	const defaultZoomLevel = 11;
+	//Leaflet map initialization
+	let map = L.map('map_div',{
+		minZoom: 7, // 최소 확대 수준
+	    maxZoom: 18, // 최대 확대 수준
+	    maxBounds: L.latLngBounds(L.latLng(33.0, 124.0), L.latLng(39.0, 132.0)) // 한반도 지역의 경계를 벗어나지 못하도록 설정
+	}).setView([35.15, 126.852601], defaultZoomLevel); // Set center and zoom level
+	
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	}).addTo(map);
+	
+	//✅ GeoJSON 데이터 지도에 추가
+	const gjLayer = L.geoJSON(window.am5geodata_gwngjuLow, {
+	    style: function(feature) {
+	        return {
+	            color: "red",     // 외곽선 색상
+	            weight: 1,        // 두께
+	            opacity: 0,     // 선 투명도
+	            fillColor: "red",// 채우기 색상
+	            fillOpacity: 0.09  // 채우기 투명도
+	        };
+	    },
+	    onEachFeature: function(feature, layer) {
+	        // 마우스 오버 팝업 예시
+	        if (feature.properties && feature.properties.NAME) {
+	//             layer.bindPopup(feature.properties.NAME);
+	        }
+	    }
+	}).addTo(map);
+	
+	// GeoJSON 영역으로 지도 줌 조정
+	map.fitBounds(gjLayer.getBounds());
+	/* ---------------------------------- leafLet End ---------------------------------- */
+	
+	// 전역 좌표 데이터
+	let coordsData = {
+	    ovrSpd: [],
+	    sudStop: [],
+	    sudStrt: [],
+	    sudDclr: [],
+	    sudAccl: []
+	};
+	
+	// 히트맵 레이어들
+	let heatLayers = {
+	    ovrSpd: null,
+	    sudStop: null,
+	    sudStrt: null,
+	    sudDclr: null,
+	    sudAccl: null
+	};
+	
+	// 마커 레이어 추가
+	let markerLayers = {
+	    ovrSpd: [],
+	    sudStop: [],
+	    sudStrt: [],
+	    sudDclr: [],
+	    sudAccl: []
+	};
+	
+	// 원본 데이터 저장용 (차량번호, 발생일시 포함)
+	let originalData = {
+	    ovrSpd: [],
+	    sudStop: [],
+	    sudStrt: [],
+	    sudDclr: [],
+	    sudAccl: []
+	};
+	
+	let currentActiveType = 'ovrSpd';
+	
+	//startDate 변경 감지
+	$("#startDate").on("change", function () {
+	    const start = dayjs($(this).val());
+	    if (start.isValid()) {
+	        const newEnd = start.add(6, "day").format("YYYY-MM-DD");
+	        $("#endDate").val(newEnd);
+	    }
+	});
+	
+	// endDate 변경 감지
+	$("#endDate").on("change", function () {
+	    const end = dayjs($(this).val());
+	    if (end.isValid()) {
+	        const newStart = end.subtract(6, "day").format("YYYY-MM-DD");
+	        $("#startDate").val(newStart);
+	    }
+	});
+	
+	//운행행태 종류 클릭 이벤트 (jQuery)
+	$('.operation_type li').click(function() {
+		
+		toggleLoading("map_div", true);
+		
+	    // 모든 li에서 on 클래스 제거
+	    $(this).siblings().removeClass('on');
+	    // 클릭한 li에만 on 클래스 추가
+	    $(this).addClass('on');
+	
+	    // 클릭한 버튼 텍스트로 타입 매핑
+	    const typeMap = {
+	        '과속': 'ovrSpd',
+	        '급정지': 'sudStop',
+	        '급출발': 'sudStrt',
+	        '급감속': 'sudDclr',
+	        '급가속': 'sudAccl'
+	    };
+	
+	    const type = typeMap[$(this).text()];
+	    currentActiveType = type;
+	
+	    // 해당 유형만 지도에 표시
+	    showHeatLayer(type);
+	});
+	
+	$('.prev_date').click(function() {
+		changeDay(-1); // 이전 달
+	});
+	
+	$('.next_date').click(function() {
+		changeDay(1); // 다음 달
+	});
+	
+	$(function() {
+		getDgrCrdList();
+	})
+	
+	//노선 운행 목록 조회
+	function getDgrCrdList() {
+	    const startTime = performance.now();
+		
+	    if($("#ocrnDt").val() == "") {
+	    	alert("기간을 선택해주세요.");
+	    	return false;
+	    }
+	    
+		const params = {
+			ownrNm: $("#ownrSelect").val(),
+			ocrnDt: $('#ocrnDt').val()
+	    };
+		
+	    customFetch({
+	        url: '/operation/getDgrCrdList',
+	        method: 'POST',
+	        params: params,
+	        aiLoadingId: 'wrap',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            const endTime = performance.now();
+	            const seconds = ((endTime - startTime) / 1000).toFixed(2);
+	            console.log('getDgrCrdList 조회 성공:', response);
+	//             console.log(`응답 시간: ${seconds} 초`);
+	            $('.operation_type li').removeClass("on").eq(0).addClass("on")
+	            setDgrCrdList(response);
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	}
+	
+	//노선 운행 목록 콜백 함수 - 수정됨
+	function setDgrCrdList(response) {
+		resetMap();
+	
+		if(response.data.list.length > 0) {
+			let list = response.data.list;
+			
+			list.forEach(item => {
+	            // 원본 데이터 저장 (차량번호와 발생일시 포함)
+	            const baseInfo = {
+	                vhclSn: item.vhclSn,
+	                ocrnDt: item.ocrnDt,
+	                ownrNm: item.ownrNm,
+	                regNo: item.regNo
+	            };
+	            
+	            // 각 위험운행 유형별로 좌표와 함께 정보 저장
+	            if (item.ovrSpdCrd) {
+	                const coords = safeParse(item.ovrSpdCrd);
+	                coords.forEach(coord => {
+	                    coordsData.ovrSpd.push(coord);
+	                    originalData.ovrSpd.push({...baseInfo, coord: coord, type: '과속'});
+	                });
+	            }
+	            
+	            if (item.sudStopCrd) {
+	                const coords = safeParse(item.sudStopCrd);
+	                coords.forEach(coord => {
+	                    coordsData.sudStop.push(coord);
+	                    originalData.sudStop.push({...baseInfo, coord: coord, type: '급정지'});
+	                });
+	            }
+	            
+	            if (item.sudStrtCrd) {
+	                const coords = safeParse(item.sudStrtCrd);
+	                coords.forEach(coord => {
+	                    coordsData.sudStrt.push(coord);
+	                    originalData.sudStrt.push({...baseInfo, coord: coord, type: '급출발'});
+	                });
+	            }
+	            
+	            if (item.sudDclrCrd) {
+	                const coords = safeParse(item.sudDclrCrd);
+	                coords.forEach(coord => {
+	                    coordsData.sudDclr.push(coord);
+	                    originalData.sudDclr.push({...baseInfo, coord: coord, type: '급감속'});
+	                });
+	            }
+	            
+	            if (item.sudAcclCrd) {
+	                const coords = safeParse(item.sudAcclCrd);
+	                coords.forEach(coord => {
+	                    coordsData.sudAccl.push(coord);
+	                    originalData.sudAccl.push({...baseInfo, coord: coord, type: '급가속'});
+	                });
+	            }
+	        });
+	
+	        // 히트맵과 마커 레이어 생성
+	        createHeatLayers();
+	        createMarkerLayers();
+	
+	        // 기본: 첫 번째 유형만 활성화
+	        showHeatLayer('ovrSpd');
+		}
+	}
+	
+	//지도 초기화 - 수정됨
+	function resetMap() {
+	    // 기존 히트맵 레이어 제거
+	    for (const key in heatLayers) {
+	        if (heatLayers[key]) {
+	            map.removeLayer(heatLayers[key]);
+	            heatLayers[key] = null;
+	        }
+	    }
+	    
+	    // 기존 마커 레이어 제거
+	    for (const key in markerLayers) {
+	        markerLayers[key].forEach(marker => {
+	            map.removeLayer(marker);
+	        });
+	        markerLayers[key] = [];
+	    }
+	
+	    // 데이터 초기화
+	    for (const key in coordsData) {
+	        coordsData[key] = [];
+	        originalData[key] = [];
+	    }
+	
+	    map.setView([35.15, 126.852601], defaultZoomLevel);
+	}
+	
+	// 히트맵 레이어 생성
+	function createHeatLayers() {
+	    const options = getHeatmapOptions();
+	    
+	    for (const type in coordsData) {
+	        if (coordsData[type].length > 0) {
+	            // 좌표 데이터를 [lat, lng] 형태로 변환
+	            const heatData = coordsData[type].map(coord => [coord[1], coord[0]]);
+	            
+	            // 히트맵 레이어 생성
+	            heatLayers[type] = L.heatLayer(heatData, options);
+	        }
+	    }
+	}
+	
+	// 마커 레이어 생성 함수 - 새로 추가
+	function createMarkerLayers() {
+	    const typeColors = {
+	        ovrSpd: '#ff0000',    // 과속 - 빨간색
+	        sudStop: '#ff8c00',   // 급정지 - 주황색
+	        sudStrt: '#ffff00',   // 급출발 - 노란색
+	        sudDclr: '#00ff00',   // 급감속 - 초록색
+	        sudAccl: '#0000ff'    // 급가속 - 파란색
+	    };
+	    
+	    for (const type in originalData) {
+	        originalData[type].forEach((data, index) => {
+	            // 투명한 원형 마커 생성
+	            const marker = L.circleMarker([data.coord[1], data.coord[0]], {
+	                radius: 5,
+	                fillColor: typeColors[type],
+	                color: typeColors[type],
+	                weight: 1,
+	                opacity: 0.0,
+	                fillOpacity: 0.0
+	            });
+	            
+	            // 클릭 이벤트 추가
+	            marker.on('click', function() {
+	                showVehicleInfo(data);
+	            });
+	            
+	            // 마우스 오버 효과
+	            marker.on('mouseover', function() {
+	                this.setStyle({
+	                    radius: 8,
+	                    opacity: 0.7,
+	                    fillOpacity: 0.5
+	                });
+	            });
+	            
+	            marker.on('mouseout', function() {
+	                this.setStyle({
+	                    radius: 5,
+	                    opacity: 0,
+	                    fillOpacity: 0
+	                });
+	            });
+	            
+	            markerLayers[type].push(marker);
+	        });
+	    }
+	}
+	
+	// 차량 정보 표시 함수 - 새로 추가
+	function showVehicleInfo(data) {
+	    const popupContent = `
+	        <div style="padding: 5px; min-width: 180px;">
+	            <h4 style="margin: 0 0 5px 0; color: #333;">${data.type} 발생</h4>
+	            <div style="margin-bottom: 2px;">
+	                <strong>차량번호:</strong> ${vhclMasked(data.regNo) || 'N/A'}
+	            </div>
+	            <div style="margin-bottom: 2px;">
+	                <strong>발생일시:</strong> ${data.ocrnDt || 'N/A'}
+	            </div>
+	        </div>
+	    `;
+	    
+	    L.popup()
+	        .setLatLng([data.coord[1], data.coord[0]])
+	        .setContent(popupContent)
+	        .openOn(map);
+	}
+	
+	// 히트맵 옵션 반환
+	function getHeatmapOptions() {
+	    return {
+	        radius: 10,
+	        blur: 15,
+	        maxZoom: 1,
+	        minOpacity: 0
+	    };
+	}
+	
+	// 히트맵 옵션 업데이트
+	function updateHeatmapOptions() {
+	    if (heatLayers[currentActiveType]) {
+	        const options = getHeatmapOptions();
+	        console.log(op)
+	        // 현재 표시된 히트맵의 옵션 업데이트
+	        heatLayers[currentActiveType].setOptions(options);
+	    }
+	}
+	
+	// 특정 유형 히트맵만 표시 - 수정됨
+	function showHeatLayer(activeType) {
+	    currentActiveType = activeType;
+	    
+	    // 모든 히트맵 레이어 숨기기
+	    for (const type in heatLayers) {
+	        if (heatLayers[type]) {
+	            map.removeLayer(heatLayers[type]);
+	        }
+	    }
+	    
+	    // 모든 마커 레이어 숨기기
+	    for (const type in markerLayers) {
+	        markerLayers[type].forEach(marker => {
+	            map.removeLayer(marker);
+	        });
+	    }
+	    
+	    // 선택된 유형의 히트맵과 마커만 표시
+	    if (heatLayers[activeType]) {
+	        heatLayers[activeType].addTo(map);
+	    }
+	    
+	    // 선택된 유형의 마커들 표시
+	    markerLayers[activeType].forEach(marker => {
+	        marker.addTo(map);
+	    });
+	    
+	    requestAnimationFrame(() => {
+	        setTimeout(() => {
+	            toggleLoading("map_div", false);
+	        }, 500);
+	    });
+	}
+	
+	//이전날/다음날 버튼 이벤트
+	function changeDay(delta) {
+	    const input = $('#ocrnDt');
+	    const current = input.val();
+	    if (!current) return;
+	
+	    // dayjs로 파싱
+	    let date = dayjs(current);
+	
+	    // delta(±1) 만큼 날짜 이동
+	    date = date.add(delta, 'day');
+	
+	    // max 속성보다 크면 리턴
+	    const maxDate = dayjs($('#ocrnDt').attr("max"));
+	    if (date.isAfter(maxDate)) {
+	        return false;
+	    }
+	
+	    // yyyy-MM-dd 형식으로 다시 세팅
+	    input.val(date.format('YYYY-MM-DD'));
+	}
+	
+	//안전하게 JSON parse
+	function safeParse(str) {
+	    try {
+	        return JSON.parse(str);
+	    } catch(e) {
+	        return [];
+	    }
+	}
+	</script>
+</body>
+
+</html>

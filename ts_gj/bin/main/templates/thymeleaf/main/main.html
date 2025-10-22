@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="main">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		    	
+		    	<div class="main_visual visual_left">
+		    		<div class="bus_wrapper">
+		    			<div class="visual_bus">
+		    				<img th:src="@{/images/egovframework/main_visual_left_bus.png}" alt="">
+		    			</div>
+		    		</div>
+		    		<img class="visual_bg" th:src="@{/images/egovframework/main_visual_left.png}" alt="">
+		    	</div>
+		    	<div class="wrapper">
+
+	    			<div class="main_contents">
+		    			<div class="main_title">
+			    			<h1>광주 시내버스 관제 서비스</h1>
+			    			<p>IoT, 클라우드, 빅데이터, AI 등 최신 IT 기술을 융합하여<br> 시내버스 운행과 정비를 지원하는 통합 관제 서비스입니다.</p>
+		    			</div>
+		    			
+		    			
+				        <ul class="main_menu">
+				            <li th:if="${currentMbrRole == 'ROLE_ADMIN' or currentMbrRole == 'ROLE_MANAGER'}">
+				            	<a th:href="@{/operation/driverList}"><span>운행행태</span><i class="fa-solid fa-angle-right"></i></a>
+			            	</li>
+							<li>
+								<a th:href="@{/vehicle/diagnosisRealtime}"><span>차량정비</span><i class="fa-solid fa-angle-right"></i></a>
+							</li>
+							<li th:if="${currentMbrRole == 'ROLE_ADMIN' or currentMbrRole == 'ROLE_MANAGER'}">
+								<a th:href="@{/blackbox/blackbox}"><span>데이터 블랙박스</span><i class="fa-solid fa-angle-right"></i></a>
+							</li>
+							<li th:if="${currentMbrRole == 'ROLE_ADMIN' or currentMbrRole == 'ROLE_MANAGER'}">
+								<a th:href="@{/dashboard/dashboard}"><span>통합 대시보드</span><i class="fa-solid fa-angle-right"></i></a>
+							</li>
+				        </ul>
+			        </div>
+
+		        </div>
+		        
+		        <div class="main_visual visual_right">
+		        	<div class="bus_wrapper">
+			        	<div class="visual_bus">
+		    				<img th:src="@{/images/egovframework/main_visual_right_bus.png}" alt="">
+		    			</div>
+	    			</div>
+		        	<img class="visual_bg" th:src="@{/images/egovframework/main_visual_right.png}" alt="">
+		        </div>
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+		<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	$(function() {
+	    //모바일 반응형 체크
+	    if (isMobile()) {
+	        $($(".menu-trigger.mobile_btn")[0]).hide();
+	    }
+	});
+	</script>
+   
+</body>
+
+</html>

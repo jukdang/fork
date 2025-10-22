@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+	        	<!-- 채팅 진행화면 : S -->
+		        <div class="chat_area">
+		        	<div class="chat_header_area">
+		        		<div class="chat_wrapper">
+			        		<div class="chat_header">
+		        				<div class="chat_header_tit">
+			        				<em class="fuel_tit" th:switch="${vehicleInfo.fuelCd}">
+									    <span th:case="'FU06'" th:text="'CNG'"></span>
+									    <span th:case="'FU02'" th:text="'경유'"></span>
+									    <span th:case="'FU05'" th:text="'수소'"></span>
+									    <span th:case="'FU04'" th:text="'전기'"></span>
+									    <span th:case="*" th:text="${vehicleInfo.fuelCd}"></span>
+									</em>
+			        				<strong th:text="${@maskingUtils.maskVehicleRegNo(vehicleInfo.regNo)}"></strong>
+			        				<input type="hidden" id="vhclSn" th:value="${vehicleInfo.vhclSn}">
+			        				<input type="hidden" id="chatSn" th:value="${chatInfo.chatSn}">
+			        				<input type="hidden" id="apiUrl" th:value="${apiUrl}">
+		        				</div>
+		        				<button class="new_chat_btn" title="새 채팅"><i class="fa-solid fa-plus"></i></button>
+		        			</div>
+	        			</div>
+        			</div>
+		        
+		        	<div class="chat_body">
+		        		<div class="chat_wrapper scrollBar" id="chatCn">
+						    <!-- 기존 채팅 내용 렌더링 -->
+						    <th:block th:if="${chatCnList != null}">
+						        <th:block th:each="chatItem, iterStat : ${chatCnList}">
+						            
+						            <!-- 질문 버블 (first가 아닌 경우만) -->
+						            <div class="query_bubble" th:if="${chatItem.qstnCn != 'first'}">
+						                <div class="query_bubble_inner">
+						                    <p th:text="${chatItem.qstnCn}"></p>
+						                </div>
+						            </div>
+						            
+						            <!-- 답변 영역 -->
+						            <div class="answer_area" th:attr="data-chat-cn-sn=${chatItem.chatCnSn}">
+						                <div class="answer">
+						                    <i class="ai_icon"><img th:src="@{/images/egovframework/ai_icon_gj.svg}" alt="광주 AI 아이콘"></i>
+						                    <div class="answer_inner">
+						                        <div class="answer_detail" 
+												     th:if="${chatItem.answer != null and chatItem.answer != ''}" 
+												     th:attr="data-raw-answer=${chatItem.answer}">
+												</div>
+												<div class="answer_detail" 
+												     th:unless="${chatItem.answer != null and chatItem.answer != ''}" 
+												     th:text="${chatItem.error}">
+												</div>
+						                        <div class="feedback_area evl_area">
+						                            <p>답변이 도움 되었나요?</p>
+						                            <span>
+						                                <button class="good_btn feedback_btn" th:classappend="${chatItem.evl == 'U'} ? 'on' : ''" title="좋은 답변 평가">
+						                                   <i class="fa-regular fa-thumbs-up"></i>
+						                                </button>
+						                                <button class="bad_btn feedback_btn" th:classappend="${chatItem.evl == 'D'} ? 'on' : ''" title="별로인 답변 평가">
+						                                   <i class="fa-regular fa-thumbs-down"></i>
+						                                </button>
+						                            </span>
+						                        </div>
+						                    </div>
+						                </div>
+						            </div>
+						            <th:block th:if="${chatItem.answer != null and chatItem.answer != ''}">
+							            <div th:if="${chatItem.recommend != null and chatItem.recommend != '[]'}" class="recommend_area_header">
+							            	<i class="recommend_icon"></i><b>이렇게 질문해 보세요.</b>
+							            </div>
+							            <div th:attr="data-recommend=${chatItem.recommend}" class="recommend-data" style="display:none;"></div>
+						            </th:block>
+					       		</th:block>
+						    </th:block>
+						</div>
+		        	</div>
+		        	
+		        	<div class="chat_input_area">
+		        		<div class="chat_wrapper">
+		        		
+			        		<div class="chat_input">
+			        			<!-- 스크린 리더용 라벨 -->
+			    				<label for="chatInput" class="sr-only">채팅 입력</label>
+				       			<textarea class="scrollBar" id="chatInput" maxlength="5000" rows="1" placeholder="메세지를 입력해주세요."></textarea>
+				       			<div class="chat_btn_area">
+				       				<button title="전송" class="chat_submit_btn scolor"><i class="fa-solid fa-arrow-right"></i></button>
+				       			</div>
+				       		</div>
+				       		
+				       		<p class="chat_info">AI가 제공한 정보는 <span>오류가 있을 수 있으므로</span> 반드시 검토 후 활용하시기 바랍니다.</p>
+			       		</div>
+		       		</div>
+		        </div>
+		        
+		       <!-- 채팅 진행화면 : E --> 
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+	    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+		let isProcessing = false;
+	
+	    $(document).on("click", ".new_chat_btn", function() {
+	        window.location.href = contextPath + "/vehicle/repairAssist";
+	    });	
+	
+		$(".chat_input textarea").on("input", function () {
+			this.style.height = "auto";
+			this.style.height = `${this.scrollHeight}px`;
+		});
+		
+        // 초기화
+		$(document).ready(function() {
+		    var vhclSn = $("#vhclSn").val();
+		    var chatSn = $("#chatSn").val();
+		    
+		    // contextPath 설정
+		    var contextPath = window.contextPath || $('meta[name="contextPath"]').attr('content') || '';
+		    
+		    // 마크다운을 HTML로 변환하는 함수
+	        function parseMarkdown(text) {
+		        return text
+		            .replace(/\n{3,}/g, '\n\n')  // 3개 이상 연속 줄바꿈을 2개로 제한
+		            .replace(/^### (.*$)/gim, '<h5>$1</h5>')
+		            .replace(/^## (.*$)/gim, '<h4>$1</h4>')
+		            .replace(/^# (.*$)/gim, '<h4>$1</h4>')
+		            .replace(/\*\*(.*)\**/gim, '<b>$1</b>')
+		            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+		            .replace(/\n\n/gim, '</p><p>')
+		    }
+		    
+		    // 사용자 질문 추가 함수
+		    function addUserMessage(message) {
+		        const queryHtml = `
+		            <div class="query_bubble">
+		                <div class="query_bubble_inner">
+		                    <p>${message}</p>
+		                </div>
+		            </div>
+		        `;
+		        $('#chatCn').append(queryHtml);
+		        scrollToBottom();
+		    }
+		    
+		    // 로딩 상태 표시 함수
+		    function showLoading() {
+		        scrollToBottom();
+		    }
+		    
+		    // 로딩 상태 제거 함수
+		    function hideLoading() {
+		        $('.loadingArea').remove();
+		    }
+		    
+		    // AI 답변 생성 함수
+		    function createAnswerArea() {
+		        const answerHtml = `
+		            <div class="answer_area">
+		                <div class="answer">
+		                    <i class="ai_icon"><img src="${contextPath}/images/egovframework/ai_icon_gj.svg" alt="광주 AI 아이콘"></i>
+		                    <span class="typing loadingArea">AI 답변을 생성중입니다...</span>
+		                    <div class="answer_inner">
+		                        <div class="answer_detail">
+		                        </div>
+		                        <div class="feedback_area evl_area" style="display:none;">
+		                            <p>답변이 도움 되었나요?</p>
+		                            <span>
+		                                <button class="good_btn feedback_btn" title="좋은 답변 평가">
+		                                   <i class="fa-regular fa-thumbs-up"></i>
+		                                </button>
+		                                <button class="bad_btn feedback_btn" title="별로인 답변 평가">
+		                                   <i class="fa-regular fa-thumbs-down"></i>
+		                                </button>
+		                            </span>
+		                        </div>
+		                    </div>
+		                </div>
+		            </div>
+		        `;
+		        $('#chatCn').append(answerHtml);
+		        return $('.answer_area').last().find('.answer_detail');
+		    }
+		    
+		    // 스크롤을 맨 아래로 이동
+		    function scrollToBottom() {
+		        $('.chat_body').scrollTop($('.chat_body')[0].scrollHeight);
+		    }
+		    
+		    // 초기 진단 결과 SSE 연결 (페이지 로드시 자동 실행)
+		    function startInitialSSEConnection() {
+			    showLoading();
+			    let apiUrl = $("#apiUrl").val();
+			    fetch(apiUrl+'/summary', {
+			        method: 'POST',
+			        headers: {
+			            'Content-Type': 'application/json',
+			            'Accept': 'text/event-stream',
+			            'Cache-Control': 'no-cache'
+			        },
+			        body: JSON.stringify({
+			            "session_id": chatSn,
+			            "vhcl_sn": parseInt(vhclSn)
+			        })
+			    }).then(response => {
+			        if (!response.ok) {
+			            throw new Error('Network response was not ok');
+			        }
+			        
+			        const reader = response.body.getReader();
+			        const decoder = new TextDecoder();
+			        let buffer = '';
+			        let messageContent = '';
+			        let lastUpdateTime = Date.now(); // 마지막 업데이트 시간
+			        
+			        // 답변 영역 생성
+			        const answerDetail = createAnswerArea();
+			        
+			        // 지연 감지를 위한 타이머 시작
+			        function checkDelay() {
+			            const now = Date.now();
+			            // AI 답변 생성중일 때는 추천질문 로딩 표시 안함
+			            if (now - lastUpdateTime > 1000 && !$('.loadingArea').is(':visible')) {
+			                if (!$('.complete-loading').length) {
+			                    showCompleteLoading();
+			                }
+			            }
+			        }
+			        
+			        // 주기적으로 지연 체크 (500ms마다)
+			        const delayCheckInterval = setInterval(checkDelay, 500);
+			        
+			        function readStream() {
+			            return reader.read().then(({ done, value }) => {
+			                if (done) {
+			                    console.log('Initial stream completed');
+			                    hideLoading();
+			                    hideCompleteLoading();
+			                    clearInterval(delayCheckInterval); // 인터벌 정리
+			                    const finalContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                    answerDetail.html(finalContent);
+			                    $(".evl_area").show();
+			                    scrollToBottom();
+			                    return;
+			                }
+			                
+			                buffer += decoder.decode(value, { stream: true });
+			                
+			                const lines = buffer.split('\n');
+			                buffer = lines.pop();
+			                
+			                lines.forEach(line => {
+			                    if (line.startsWith('data: ')) {
+			                        // 데이터를 받았으므로 시간 업데이트
+			                        lastUpdateTime = Date.now();
+			                        hideCompleteLoading(); // 데이터 받으면 로딩 숨김
+			                        
+			                        const data = line.substring(6).trim();
+			                        
+			                        if (data === '[DONE]') {
+			                            hideLoading();
+			                            hideCompleteLoading();
+			                            clearInterval(delayCheckInterval);
+			                            const finalContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                            answerDetail.html(finalContent);
+			                            scrollToBottom();
+			                            return;
+			                        }
+			                        
+			                        try {
+			                            const jsonData = JSON.parse(data);
+			                            
+			                            if (jsonData.type === 'answer_chunk' && jsonData.content) {
+			                                hideLoading();
+			                                messageContent += jsonData.content;
+			                                const currentContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                                answerDetail.html(currentContent);
+			                                scrollToBottom();
+			                            }
+			                            
+			                            if (jsonData.type === 'complete') {
+			                                hideLoading();
+			                                hideCompleteLoading();
+			                                clearInterval(delayCheckInterval);
+			                                createRecommendArea(jsonData.recommended_questions);
+			                                saveChatContent('first', jsonData);
+			                                $(".evl_area").show();
+			                                isProcessing = false; // 처리 완료
+			                            }
+			                            
+			                        } catch (e) {
+			                            console.error('JSON parse error:', e);
+			                            // JSON 파싱 실패해도 시간은 업데이트 (데이터는 받았으므로)
+			                            lastUpdateTime = Date.now();
+			                            isProcessing = false;
+			                        }
+			                    }
+			                });
+			                
+			                return readStream();
+			            });
+			        }
+			        
+			        return readStream();
+			        
+			    }).catch(error => {
+			        console.error('Initial SSE Connection Error:', error);
+			        hideLoading();
+			        hideCompleteLoading();
+			        clearInterval(delayCheckInterval); // 인터벌 정리
+			        
+			        const errorHtml = `
+			            <div class="answer_area">
+			                <div class="answer">
+			                    <i class="ai_icon"><img src="${contextPath}/images/egovframework/ai_icon_gj.svg" alt="광주 AI 아이콘"></i>
+			                    <div class="answer_inner">
+			                        <div class="answer_detail">
+			                            <p>연결 오류가 발생했습니다: ${error.message}</p>
+			                        </div>
+			                    </div>
+			                </div>
+			            </div>
+			        `;
+			        $('#chatCn').append(errorHtml);
+			        scrollToBottom();
+			        isProcessing = false;
+			    });
+			}
+		    
+		    // 질문 답변 SSE 연결
+			function startQuestionSSEConnection(question) {
+			    showLoading();
+			    let apiUrl = $("#apiUrl").val();
+			    fetch(apiUrl+'/question', {
+			        method: 'POST',
+			        headers: {
+			            'Content-Type': 'application/json',
+			            'Accept': 'text/event-stream',
+			            'Cache-Control': 'no-cache'
+			        },
+			        body: JSON.stringify({
+			            "question": question,
+			            "session_id": chatSn,
+			            "vhcl_sn": parseInt(vhclSn)
+			        })
+			    }).then(response => {
+			        if (!response.ok) {
+			            throw new Error('Network response was not ok');
+			        }
+			        
+			        const reader = response.body.getReader();
+			        const decoder = new TextDecoder();
+			        let buffer = '';
+			        let messageContent = '';
+			        let lastUpdateTime = Date.now(); // 마지막 업데이트 시간
+			        
+			        // 답변 영역 생성
+			        const answerDetail = createAnswerArea();
+			        scrollToBottom();
+			        
+			        // 지연 감지를 위한 타이머 시작
+			        function checkDelay() {
+			            const now = Date.now();
+			            // AI 답변 생성중일 때는 추천질문 로딩 표시 안함
+			            if (now - lastUpdateTime > 500 && !$('.loadingArea').is(':visible')) {
+			                if (!$('.complete-loading').length) {
+			                    showCompleteLoading();
+			                }
+			            }
+			        }
+			        
+			        // 주기적으로 지연 체크 (500ms마다)
+			        const delayCheckInterval = setInterval(checkDelay, 500);
+			        
+			        function readStream() {
+			            return reader.read().then(({ done, value }) => {
+			                if (done) {
+			                    hideLoading();
+			                    hideCompleteLoading();
+			                    clearInterval(delayCheckInterval); // 인터벌 정리
+			                    console.log('Question stream completed');
+			                    const finalContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                    answerDetail.html(finalContent);
+			                    $(".evl_area").show();
+			                    scrollToBottom();
+			                    return;
+			                }
+			                
+			                buffer += decoder.decode(value, { stream: true });
+			                
+			                const lines = buffer.split('\n');
+			                buffer = lines.pop();
+			                
+			                lines.forEach(line => {
+			                    if (line.startsWith('data: ')) {
+			                        
+			                        // 데이터를 받았으므로 시간 업데이트
+			                        lastUpdateTime = Date.now();
+			                        hideCompleteLoading(); // 데이터 받으면 로딩 숨김
+			                        
+			                        const data = line.substring(6).trim();
+			                        
+			                        if (data === '[DONE]') {
+			                            hideLoading();
+			                            clearInterval(delayCheckInterval);
+			                            const finalContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                            answerDetail.html(finalContent);
+			                            scrollToBottom();
+			                            return;
+			                        }
+			                        
+			                        try {
+			                            const jsonData = JSON.parse(data);
+			                            
+			                            if (jsonData.type === 'answer_chunk' && jsonData.content) {
+			                                hideLoading();
+			                                messageContent += jsonData.content;
+			                                const currentContent = '<p>' + parseMarkdown(messageContent) + '</p>';
+			                                answerDetail.html(currentContent);
+			                                scrollToBottom();
+			                            }
+			                            
+			                            if (jsonData.type === 'complete') {
+			                                hideLoading();
+			                                hideCompleteLoading();
+			                                clearInterval(delayCheckInterval);
+			                                createRecommendArea(jsonData.recommended_questions);
+			                                saveChatContent(question, jsonData);
+			                                $(".evl_area").show();
+			                                isProcessing = false;
+			                            }
+			                            
+			                            if (!jsonData.success && jsonData.error) {
+			                                hideLoading();
+			                                hideCompleteLoading();
+			                                clearInterval(delayCheckInterval);
+			                                messageContent += jsonData.error;
+			                                saveChatContent(question, jsonData);
+			                                isProcessing = false;
+			                            }
+			                            
+			                        } catch (e) {
+			                            console.error('JSON parse error:', e);
+			                            // JSON 파싱 실패해도 시간은 업데이트 (데이터는 받았으므로)
+			                            lastUpdateTime = Date.now();
+			                            isProcessing = false;
+			                        }
+			                    }
+			                });
+			                
+			                return readStream();
+			            });
+			        }
+			        
+			        return readStream();
+			        
+			    }).catch(error => {
+			        console.error('Question SSE Connection Error:', error);
+			        hideLoading();
+			        hideCompleteLoading();
+			        clearInterval(delayCheckInterval); // 인터벌 정리
+			        
+			        const errorHtml = `
+			            <div class="answer_area">
+			                <div class="answer">
+			                    <i class="ai_icon"><img src="${contextPath}/images/egovframework/ai_icon_gj.svg" alt="광주 AI 아이콘"></i>
+			                    <div class="answer_inner">
+			                        <div class="answer_detail">
+			                            <p>연결 오류가 발생했습니다: ${error.message}</p>
+			                        </div>
+			                    </div>
+			                </div>
+			            </div>
+			        `;
+			        $('#chatCn').append(errorHtml);
+			        scrollToBottom();
+			        isProcessing = false;
+			    });
+			}
+			
+			// complete 처리 중 로딩 표시 함수
+			function showCompleteLoading() {
+			    if (!$('.complete-loading').length) {
+			        const completeLoadingHtml = `
+			            <div class="complete-loading" style="text-align: center; padding: 10px; color: #666; font-size: 16px;">
+			            	<span class="typing loadingArea">잠시만 기다려주세요...</span>
+			            </div>
+			        `;
+			        $('#chatCn').append(completeLoadingHtml);
+			        scrollToBottom();
+			    }
+			}
+			
+			// complete 로딩 숨김 함수
+			function hideCompleteLoading() {
+			    $('.complete-loading').remove();
+			}
+
+		    
+		    // 메시지 전송 함수
+		    function sendMessage() {
+		        const message = $('#chatInput').val().trim();
+		        if (message === '' || isProcessing) return; // 처리 중이면 전송 차단
+		        
+		        isProcessing = true; // 처리 시작
+		        // 사용자 메시지 추가
+		        addUserMessage(message);
+		        
+		        // 입력창 초기화
+		        $('#chatInput').val('').css('height', 'auto');
+		        
+		        // 질문 답변 SSE 연결 시작
+		        startQuestionSSEConnection(message);
+		    }
+		    
+		    // 전송 버튼 클릭 이벤트
+		    $('.chat_submit_btn').on('click', function() {
+		        sendMessage();
+		    });
+		    
+		    // Enter 키로 메시지 전송 (Shift+Enter는 줄바꿈)
+		    $('#chatInput').on('keydown', function(e) {
+		        if (e.key === 'Enter' && !e.shiftKey) {
+		            e.preventDefault();
+		            sendMessage();
+		        }
+		    });
+		    
+		    // 추천 질문 클릭 이벤트
+		    $(document).on('click', '.recommend_question_item p', function() {
+		        const question = $(this).text();
+		        $('#chatInput').val(question);
+		        sendMessage();
+		    });
+		    
+		    // 피드백 버튼 클릭 이벤트
+		    $(document).on('click', '.feedback_btn', function() {
+		        $(this).siblings('.feedback_btn').removeClass('on');
+		        $(this).addClass('on');
+		        
+		        const answerArea = $(this).closest('.answer_area');
+		        const chatCnSn = answerArea.attr('data-chat-cn-sn');
+		        
+		        // 피드백 타입 확인 (좋아요: Y, 싫어요: N)
+		        const evl = $(this).hasClass('good_btn') ? 'U' : 'D';
+		        
+		        updateChatCnFeedBack(chatCnSn, evl);
+		    });
+		    
+		    // 전역 함수로 노출
+		    window.sendLLMMessage = function(message) {
+		        $('#chatInput').val(message);
+		        sendMessage();
+		    };
+		    
+		    // 페이지 로드시 초기 진단 결과 자동 실행
+		    const hasExistingChats = $('.answer_area').length > 0;
+    
+		    if (hasExistingChats) {
+		        // 기존 채팅의 마크다운 처리
+		        processExistingChatsMarkdown();
+		        processRecommendQuestions();
+		        // 스크롤을 맨 아래로 이동
+		        scrollToBottom();
+		    } else {
+		        // 기존 채팅이 없을 때만 초기 진단 결과 자동 실행
+		        startInitialSSEConnection();
+		    }
+			
+			// 기존 채팅의 마크다운 처리 함수
+			function processExistingChatsMarkdown() {
+			    $('.answer_detail[data-raw-answer]').each(function() {
+			        const rawAnswer = $(this).attr('data-raw-answer');
+			        if (rawAnswer && rawAnswer !== 'null') {
+			            // JSON 따옴표 제거 및 이스케이프 문자 처리
+			            const cleanAnswer = rawAnswer.replace(/^"|"$/g, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+			            const processedAnswer = '<p>' + parseMarkdown(cleanAnswer) + '</p>';
+			            $(this).html(processedAnswer);
+			        }
+			    });
+			}
+			
+			function processRecommendQuestions() {
+			    $('.recommend-data').each(function() {
+			        const recommendData = $(this).attr('data-recommend');
+			        if (recommendData && recommendData !== 'null') {
+			            try {
+			                const questions = JSON.parse(recommendData);
+			                let html = '';
+			                questions.forEach(question => {
+			                    html += `
+			                        <div class="recommend_question_item">
+			                            <p tabindex="0">${question}</p>
+			                        </div>
+			                    `;
+			                });
+			                $(this).after(html);
+			            } catch (e) {
+			                console.error('JSON parse error:', e);
+			            }
+			        }
+			    });
+			}
+		});
+        
+		// textarea 높이 자동 조절
+		$(".chat_input textarea").on("input", function () {
+		    this.style.height = "auto";
+		    this.style.height = `${this.scrollHeight}px`;
+		});
+		
+		function createRecommendArea(item){
+		    if (!item || item.length === 0) {
+		        return;
+		    }
+		    var recommendHtml = `<div class="recommend_area_header">
+			        <i class="recommend_icon"></i><b>이렇게 질문해 보세요.</b>
+			        </div>
+			        <div class="recommend_question_item">
+			        </div>
+		        `;
+		        
+		    item.forEach((question, index) => {
+		        recommendHtml += `
+		        <div class="recommend_question_item">
+		            <p tabindex="0">${question}</p>
+		        </div>
+		        `;
+		    });
+		    
+		    // .answer_area의 바깥, 즉 답변 영역 다음에 추가
+		    $('.answer_area').last().after(recommendHtml);
+		}
+		
+		function saveChatContent(question, answer){
+		    var vhclSn = $("#vhclSn").val();
+		    var chatSn = $("#chatSn").val();
+			const chatData = {
+		        chatSn: chatSn,
+		        vhclSn: parseInt(vhclSn),
+		        qstnCn: question,
+		        ansCn: JSON.stringify(answer)
+		    };
+			
+		    customFetch({
+		        url: '/vehicle/saveChatContent',
+		        method: 'POST',
+		        params: chatData,
+		        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		        onSuccess: (response) => {
+		            console.log('채팅 저장 성공:', response);
+		            // 저장된 chat_cn_sn을 답변 영역에 data 속성으로 저장
+		            $('.answer_area').last().attr('data-chat-cn-sn', response.data.list.chat_cn_sn);
+		        },
+		        onError: (error) => console.error('채팅 저장 에러:', error)
+		    });
+		}
+		
+		function updateChatCnFeedBack(chatCnSn, evl){
+			customFetch({
+		        url: '/vehicle/updateChatCnFeedBack',
+		        method: 'POST',
+		        params: {
+		        	chatCnSn : chatCnSn,
+		        	evl : evl
+        		},
+		        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		        onSuccess: (response) => {
+		            console.log('피드백 저장 성공:', response);
+		        },
+		        onError: (error) => console.error('피드백 저장 에러:', error)
+		    });
+		}
+	</script>
+   
+</body>
+
+</html>

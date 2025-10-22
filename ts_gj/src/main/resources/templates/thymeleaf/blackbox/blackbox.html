@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/js/egovframework/leaflet/leaflet.css}">
+	<script th:src="@{/js/egovframework/leaflet/leaflet.js}"></script>
+	<script th:src="@{/js/egovframework/customChart.js}"></script>
+	<script th:src="@{/js/egovframework/dashboard/gwangju.js}"></script>
+</head>
+<style>
+  /* select_box1, select_box2, select_box3에만 disabled 옵션 스타일 적용 */
+  #select_box1 option:disabled,
+  #select_box2 option:disabled,
+  #select_box3 option:disabled {
+    color: #aaa;               /* 글자 색 */
+    background-color: #f5f5f5; /* 배경 색 */
+  }
+</style>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: top-menu"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="blackbox">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+					<div class="filter_area wh_box">
+						<div class="filter_box_wrap">
+							<div class="filter_box">
+				    			<label for="regNoInput">차량번호</label>
+				    			<div class="filter_input_area">
+					    			<input type="text" id="regNoInput" placeholder="예) 광주12가3456">
+					    			<th:block th:replace="/common/regNo :: regNo-search"></th:block>
+					    			<ul class="dropdown" id="dropdown" style="display:none;">
+									</ul>
+								</div>
+				    		</div>
+							<div class="filter_box">
+				    			<label>기간</label>
+				    			<div class="date_box">
+				    				<!-- 스크린 리더용 라벨 -->
+								    <label for="startDate" class="sr-only">기간 선택</label>
+									<input type="date" id="startDate">
+									<span class="date_range_box">
+										<!-- 스크린 리더용 라벨 -->
+								    	<label for="startTime" class="sr-only">시작시간</label>
+										<input type="time" id="startTime">
+										<em>~</em>
+										<!-- 스크린 리더용 라벨 -->
+								    	<label for="endTime" class="sr-only">종료시간</label>
+										<input type="time" id="endTime">
+									</span>
+								</div>
+				    		</div>
+			    		</div>
+			    		<button class="btn lg black btn_search" onclick="getSensorInfo();">조회</button>
+					</div>
+					
+					
+					<div class="cont_section">
+						<div class="w6to4">
+							<div>
+								<div class="tit">
+									<h2>센서 시각화</h2>
+									<div class="set_box">
+										<em class="set_sensor_tit">센서</em>
+										<span>
+											<!-- 스크린 리더용 라벨 -->
+								    		<label for="select_box1" class="sr-only">센서 선택01</label>
+											<select id="select_box1">
+												<option>차량을 검색해주세요.</option>
+											</select>
+											<!-- 스크린 리더용 라벨 -->
+								    		<label for="select_box2" class="sr-only">센서 선택02</label>
+											<select id="select_box2">
+												<option>차량을 검색해주세요.</option>
+											</select>
+											<!-- 스크린 리더용 라벨 -->
+								    		<label for="select_box3" class="sr-only">센서 선택03</label>
+											<select id="select_box3">
+												<option>차량을 검색해주세요.</option>
+											</select>
+										</span>
+									</div>
+								</div>
+								<div class="wh_box">
+									<div class="blackbox_graph" id="chartDiv">
+										<div class="cont_none type02">
+									 		<i class="fa-solid fa-file-circle-xmark"></i>
+									 		<p>센서를 선택해주세요.</p>
+									 	</div>
+									</div>
+								</div>
+							</div>
+							<div>
+								<div class="tit">
+									<h2>차량 위치</h2>
+								</div>
+								<div id="map_div" class="bus_location_map" style="background: #fff;">
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<div class="cont_section">
+						<div style="display: none;">
+							<div class="tit">
+								<h2>센서 리스트</h2>
+								<button class="btn mid white" onclick="fn_download();">다운로드</button>
+							</div>
+							
+							<ul class="sensor_list" id="sensorList">
+								<li> 
+									<div class="list">
+										<div class="list_tit">
+											<span>ETC</span>
+											<em>
+												<input type="checkbox">
+												<label><span>전체 선택</span></label>	
+											</em>
+										</div>
+										<div class="desc">
+											<input type="checkbox">
+											<label><span>GPS 경도</span></label>	
+											<input type="checkbox">
+											<label><span>GPS 위도</span></label>
+											<input type="checkbox">
+											<label><span>GPS 차량 속도</span></label>	
+										</div>
+									</div>
+								</li>
+								<li> 
+									<div class="list">
+										<div class="list_tit">
+											<span>ETC</span>
+											<em>
+												<input type="checkbox">
+												<label><span>전체 선택</span></label>	
+											</em>
+										</div>
+										<div class="desc">
+											<input type="checkbox">
+											<label><span>GPS 경도</span></label>	
+											<input type="checkbox">
+											<label><span>GPS 위도</span></label>
+											<input type="checkbox">
+											<label><span>GPS 차량 속도</span></label>	
+										</div>
+									</div>
+								</li>
+								<li> 
+									<div class="list">
+										<div class="list_tit">
+											<span>ETC</span>
+											<em>
+												<input type="checkbox">
+												<label><span>전체 선택</span></label>	
+											</em>
+										</div>
+										<div class="desc">
+											<input type="checkbox">
+											<label><span>GPS 경도</span></label>	
+											<input type="checkbox">
+											<label><span>GPS 위도</span></label>
+											<input type="checkbox">
+											<label><span>GPS 차량 속도</span></label>	
+										</div>
+									</div>
+								</li>
+							</ul>
+						</div>
+		
+					</div>
+				
+	            </div>
+	        </div>
+
+	    </div>
+		<!-- container : E -->
+		
+		<!-- 푸터 -->
+		<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+		
+	</div>
+	<!-- wrap : E -->
+	
+	<script>
+	let MyGlobalObject = {};
+	
+	/* ---------------------------------- leafLet Start ---------------------------------- */
+	const defaultZoomLevel = 11;
+	//Leaflet map initialization
+	let map = L.map('map_div',{
+		minZoom: 7, // 최소 확대 수준
+	    maxZoom: 18, // 최대 확대 수준
+	    maxBounds: L.latLngBounds(L.latLng(33.0, 124.0), L.latLng(39.0, 132.0)) // 한반도 지역의 경계를 벗어나지 못하도록 설정
+	}).setView([35.15, 126.852601], defaultZoomLevel); // Set center and zoom level
+	
+	//Add tile layer
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	}).addTo(map);
+	
+	//✅ GeoJSON 데이터 지도에 추가
+	const gjLayer = L.geoJSON(window.am5geodata_gwngjuLow, {
+	    style: function(feature) {
+	        return {
+	            color: "red",     // 외곽선 색상
+	            weight: 1,        // 두께
+	            opacity: 0,     // 선 투명도
+	            fillColor: "red",// 채우기 색상
+	            fillOpacity: 0.125  // 채우기 투명도
+	        };
+	    },
+	    onEachFeature: function(feature, layer) {
+	        // 마우스 오버 팝업 예시
+	        if (feature.properties && feature.properties.NAME) {
+	//             layer.bindPopup(feature.properties.NAME);
+	        }
+	    }
+	}).addTo(map);
+	
+	// GeoJSON 영역으로 지도 줌 조정
+	map.fitBounds(gjLayer.getBounds());
+	/* ---------------------------------- leafLet End ---------------------------------- */
+	
+	let markerList = new Array(); 		// 마커 위도/경도 담는 배열 
+	let markers = new Array(); 			// 지도위 마커들을 배열
+	let markerPositions = new Array();	// 마커들의 좌표정보만 담는 배열
+	
+	let regNo = "";
+	let vhclType = "";
+	let mtId = "";
+	
+	$('#startDate').attr('max', dayjs().format("YYYY-MM-DD"));
+	$('#startTime').val(dayjs().subtract(180, 'minute').format('HH:mm'));
+	$('#endTime').val(dayjs().format('HH:mm'));
+	
+	if(!$('#startDate').val()){
+		$('#startDate').val(dayjs().format("YYYY-MM-DD"));
+	}
+	
+	$(function () {
+		
+		$(document).on('vehicle:selected', function(e, vehicle) {
+		    regNo = vehicle.regNo;
+		    vhclType = vehicle.vhclType;
+		    mtId = vehicle.mtId;
+	
+// 		    console.log("선택된 차량 regNo:", regNo);
+// 		    console.log("선택된 차량 vhclType:", vhclType);
+// 		    console.log("선택된 차량 mtId:", mtId);
+		});
+		
+		// 센서 변경 시
+	    $('#select_box1').change(function(){
+	    	getChartData();
+	    });
+	 	
+	 	// 센서 변경 시
+	    $('#select_box2').change(function(){
+	    	getChartData();
+	    });
+	 
+	 	// 센서 변경 시
+	    $('#select_box3').change(function(){
+	    	getChartData();
+	    });
+		
+	})
+	
+	//센서 셀렉박스 중복 방지
+	function preventDuplicate() {
+	    const selectElements = [
+	        document.getElementById('select_box1'),
+	        document.getElementById('select_box2'),
+	        document.getElementById('select_box3')
+	    ];
+	
+	    const selectedValues = selectElements.map(select => select.value);
+	
+	    selectElements.forEach(select => {
+	        Array.from(select.options).forEach(option => {
+	            if (option.value != "" && selectedValues.includes(option.value) && option.value !== select.value) {
+	                option.disabled = true;
+	            } else {
+	                option.disabled = false;
+	            }
+	        });
+	    });
+	}
+	
+	//센서 리스트 가져오기
+	function getSensorInfo() {
+		
+		markerList = [];
+		markerPositions = [];
+		
+		if(regNo == '') {
+			alert("차량번호를 선택해주세요.");
+			$("#regNoInput").focus();
+			return false;
+		}
+	
+	    const params = {
+	    	vhclType: vhclType
+	    };
+		
+	    customFetch({
+	        url: '/vehicle/getSensorInfo',
+	        method: 'POST',
+	        params: params,
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getSensorInfo 조회 성공:', response);
+	            if(response.code == 200) {
+	            	setSensorList(response, regNo, mtId)
+	            }
+	            
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+		
+	}
+	
+	//센서 리스트 세팅
+	function setSensorList(response, regNo, mtId) {
+		
+		let sensorInfo = response.data.list;
+		
+		if(sensorInfo.length == 0) {
+			$('#sensorList').parent().hide();
+			return false;
+		}
+		
+		//display 값이 Y인것만
+		const filteredData = sensorInfo.filter(item => item.vwYn !== "N");
+		var html = '';
+		const groups = {};
+		filteredData.forEach(sensor => {
+		    // sysNm이 null이면 'ETC'로 처리
+		    let key = sensor.sysNm || "ETC";
+	
+		    if (!groups[key]) {
+		        groups[key] = [];
+		    }
+		    groups[key].push(sensor);
+		});
+	//		console.log("groups", groups)
+		for (const group of [...Object.keys(groups).filter(g => g !== "ETC"), ..."ETC" in groups ? ["ETC"] : []]) {
+			const sensors = groups[group];
+		    let groupName = group;
+		    html += '<li>';
+		    html += '	<div class="list">';
+		    html += '		<div class="list_tit">';
+		    html += '			<span>'+groupName+'</span>';
+		    html += '			<em class="all_check">';
+		    html += '				<input type="checkbox" class="selectAllCheckbox" id="AllChk_'+groupName+'" data-group="'+groupName+'">';
+		    html += '				<label for="AllChk_'+groupName+'"><span>전체 선택</span></label>';
+		    html += '			</em>';
+		    html += '		</div>';
+		    html += '		<div class="desc disflex">';
+		    sensors.forEach(sensor => {
+		        html += '			<input type="checkbox" class="sensorCheckbox" id="chk'+sensor.snsrSn+'" name="'+groupName+'" data-code="'+sensor.snsrCd+'" data-name="'+sensor.snsrNm+'" data-switch="'+sensor.sttsTypeYn+'">';
+		        html += '			<label for="chk'+sensor.snsrSn+'"><span>'+sensor.snsrNm+'</span></label>';
+		    });
+		    html += '		</div>';
+		    html += '	</div>';
+		    html += '</li>';
+	    }
+		
+		$('#sensorList').html(html);
+		$('#sensorList').parent().show();
+		$('.selectAllCheckbox').change(function() {
+	        var group = $(this).data('group');
+	        var isChecked = $(this).prop('checked');
+	        $('input[name="' + group + '"]').prop('checked', isChecked);
+	    });
+	
+	    // 개별 체크박스 변경 시 전체 선택 체크박스 상태 업데이트
+	    $('.sensorCheckbox').change(function() {
+	        var group = $(this).attr('name');
+	        var allCheckbox = $('#AllChk_' + group);
+	        var checkboxes = $('input[name="' + group + '"]');
+	        var allChecked = checkboxes.filter(':checked').length === checkboxes.length;
+	        allCheckbox.prop('checked', allChecked);
+	    });
+	    
+	    //센서 셀렉박스 3개 세팅
+	    var optionHtml = "<option value=''>선택</option>";
+		for(var i = 0; i < $(".sensorCheckbox").length; i++) {
+			if($(".sensorCheckbox").eq(i).data('name') != "GPS 경도" && $(".sensorCheckbox").eq(i).data('name') != "GPS 위도") {
+	    		//optionHtml += "<option value='" + $(".sensorCheckbox").eq(i).data('code') + "'>" + $(".sensorCheckbox").eq(i).data('name') + "</option>";
+				optionHtml += "<option data-switch='"+$(".sensorCheckbox").eq(i).data('switch')+"' value='" + $(".sensorCheckbox").eq(i).data('code') + "'>" + $(".sensorCheckbox").eq(i).data('name') + "</option>";
+			}
+		}
+		$("#select_box1").empty().append(optionHtml);
+		$("#select_box2").empty().append(optionHtml);
+		$("#select_box3").empty().append(optionHtml);
+		
+	    //센서 데이터 차트
+	    getChartData();
+	    
+	    //지도위 버스 표시
+	    getInfluxData(regNo, mtId);
+	}
+	
+	//센서 데이터 가져오기
+	function getChartData() {
+		
+		preventDuplicate();
+		
+		var selectBoxColList = [];
+		var selectBoxSeriesList = [];
+		var selectBoxSwitchList = [];
+		
+		for(var i = 0; i < 3; i++) {
+			if($("#select_box" + (i + 1)).val() != "") {
+				selectBoxColList.push($("#select_box" + (i + 1)).val());
+				selectBoxSeriesList.push($("#select_box" + (i + 1) + " :selected").text());
+				selectBoxSwitchList.push($("#select_box" + (i + 1) + " :selected").data('switch'));
+			}
+		}
+		
+		var selectBoxCol = selectBoxColList.filter(item => item !== "").join(",");
+		
+		if(selectBoxCol != "") {
+			selectBoxCol = "_time," + selectBoxCol;
+		}else {
+			$(".cont_none").show();
+			return false;
+		}
+		
+		var endDate = new Date($('#startDate').val()+'T'+$("#endTime").val()+':00');
+		var startDate = new Date($('#startDate').val()+'T'+$("#startTime").val()+':00');
+		
+		let start_date_time = new Date(startDate).toISOString().split('.')[0] + 'Z';
+	    let end_date_time = new Date(endDate).toISOString().split('.')[0] + 'Z';
+		
+		const params = {
+			start_date_time: start_date_time,
+	        end_date_time: end_date_time,
+	        influx_column: selectBoxCol,
+	        influx_table: mtId
+	    };
+		
+	    customFetch({
+	        url: '/influx/getSensorHistory',
+	        method: 'POST',
+	        params: params,
+	        loadingId: 'chartDiv',
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getChartData 조회 성공:', response);
+	           	setChartData(response, selectBoxColList, selectBoxSeriesList, selectBoxSwitchList);
+	            
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+		
+	}
+	
+	//차트 데이터 to Line Chart
+	function setChartData(response, selectBoxColList, selectBoxSeriesList, selectBoxSwitchList) {
+		
+		let data = response.result;	
+	
+		if(data.length == 0) {
+			
+			let noneHtml = `<div class="cont_none type02">
+						 		<i class="fa-solid fa-file-circle-xmark"></i>
+						 		<p>데이터가 없습니다.</p>
+						 	</div>`;
+			$("#chartDiv").html(noneHtml);
+			if(MyGlobalObject["chartDiv"]){   //check if exist chart dispose that
+				MyGlobalObject["chartDiv"].dispose();
+		    }
+			return false;
+		}
+		
+		let resultData = [];
+		
+		for(var i = 0; i < data.length; i++) {
+			data[i].date = data[i].time;
+		}
+		
+		$(".cont_none").hide();
+		makeLineChart("chartDiv", data, selectBoxColList, selectBoxSeriesList, selectBoxSwitchList);
+	}
+	
+	//센서 데이터 다운로드
+	function fn_download() {
+		
+		if($('input[type="checkbox"].sensorCheckbox:checked').length == 0) {
+			alert("센서를 선택해주세요.");
+			return false;
+		}
+		
+		var endDate = new Date($('#startDate').val()+'T'+$("#endTime").val()+':00');
+		var startDate = new Date($('#startDate').val()+'T'+$("#startTime").val()+':00');
+		
+	    let start_date_time = new Date(startDate).toISOString().split('.')[0] + 'Z';
+	    let end_date_time = new Date(endDate).toISOString().split('.')[0] + 'Z';
+		
+		var checkedCodes = [];
+		var checkedCodeNames = [];
+		$('input[type="checkbox"].sensorCheckbox:checked').each(function() {
+	        var code = $(this).data('code');
+	        var name = $(this).data('name');
+	        
+	        if (code) {
+	            checkedCodes.push(code); // 배열에 추가
+	            checkedCodeNames.push(name);
+	        }
+	    });
+		
+		let columns = checkedCodes.length ? "_time," + checkedCodes.join(',') : "";
+		let columnNames = checkedCodeNames.length ? "_time," + checkedCodeNames.join(',') : "";
+		
+		const params = {
+	        start_date_time: start_date_time,
+	        end_date_time: end_date_time,
+	        influx_column: columns,
+	        influx_column_name: columnNames,
+	        influx_table: mtId
+	    };
+		
+		$.ajax({
+	        type: "POST",
+	        url: contextPath + "/blackbox/dataDownload",
+	        data: params,
+	        success: function(response) {
+	            // CSV 파일 다운로드
+	            var blob = new Blob(["\ufeff"+response], { type: 'text/csv;charset=UTF-8' });
+	            var link = document.createElement('a');
+	            link.href = window.URL.createObjectURL(blob);
+	            link.download = vhclMasked(regNo)+'.csv';
+	            document.body.appendChild(link);
+	            link.click();
+	            document.body.removeChild(link);
+	            window.URL.revokeObjectURL(link.href);
+		    	setTimeout(function(){
+		    	 	$('.loading_bg').removeClass('on');
+				},0)
+	        },
+	        error: function(xhr, status, error) {
+				setTimeout(function(){
+		    	 	$('.loading_bg').removeClass('on');
+				},0)
+				alert('죄송합니다. \n데이터 처리 중에 시간 초과가 발생하여 연결이 끊어졌습니다. \n검색 기간을 줄여 다시 시도해주세요.').
+	            console.error("Error: ", error);
+	        }
+	    });
+		
+	}
+	
+	//
+	function makeLineChart(id, data, selectBoxColList, selectBoxSeriesList, selectBoxSwitchList) {
+	//     console.log("data", data);
+	    if(MyGlobalObject[id]){   //check if exist chart dispose that
+			MyGlobalObject[id].dispose();
+	    }
+	
+	    // Create root element
+	    // https://www.amcharts.com/docs/v5/getting-started/#Root_element
+	    var root = am5.Root.new(id);
+	
+	    // Set themes
+	    // https://www.amcharts.com/docs/v5/concepts/themes/
+	    root.setThemes([am5themes_Animated.new(root)]);
+	
+	    // Create chart
+	    // https://www.amcharts.com/docs/v5/charts/xy-chart/
+	    var chart = root.container.children.push(
+	        am5xy.XYChart.new(root, {
+	            panX: false,
+	            panY: false,
+	            //wheelX: "panX",
+	            //wheelY: "zoomX",
+	            paddingLeft: 0,
+	            layout: root.verticalLayout
+	        })
+	    );
+	
+	    // Create axes
+	    // https://www.amcharts.com/docs/v5/charts/xy-chart/axes/
+	    var xRenderer = am5xy.AxisRendererX.new(root, {
+	        minorGridEnabled: true,
+	        minGridDistance: 150
+	    });
+	    
+	    var xAxis = chart.xAxes.push(
+	        am5xy.CategoryAxis.new(root, {
+	            categoryField: "date",
+	            //baseInterval: { timeUnit: "second", count: 1 },
+	            renderer: xRenderer,
+	            tooltip: am5.Tooltip.new(root, {}),
+	            grid: {
+	                template: {
+	                    location: 0.5,
+	                }
+	            }
+	        })
+	    );
+	    
+	    // Rotate labels to prevent overlap
+	    xRenderer.labels.template.setAll({
+	        centerY: am5.p50,
+	        centerX: am5.p100,
+	        textAlign: "right"
+	    });
+		
+	    xAxis.data.setAll(data);
+	    
+	 	// Use adapters to format the labels
+	    xAxis.get("renderer").labels.template.adapters.add("text", function(text, target) {
+	        // Customize this function to slice the text as needed
+	        if (target.dataItem && target.dataItem.get("category")) {
+	            return target.dataItem.get("category").slice(11, 19); // Adjust the slice range as needed
+	        }
+	        return text;
+	    });
+	 	
+	    xAxis.get("renderer").labels.template.setAll({
+			fontSize: 12,
+		});
+	    
+		 // 첫 번째 라벨 숨기기 (데이터 설정 후)
+	    xAxis.get("renderer").labels.template.adapters.add("visible", function(visible, target) {
+	        const dataItem = target.dataItem;
+	        if (dataItem && dataItem.get("category") === data[0].time) {
+	            return false;
+	        }
+	        return visible;
+	    });
+	    
+	    var yAxis = chart.yAxes.push(
+	        am5xy.ValueAxis.new(root, {
+	            renderer: am5xy.AxisRendererY.new(root, {
+	                strokeOpacity: 0.1,
+	            }),
+	        })
+	    );
+	    
+	    yAxis.get("renderer").labels.template.setAll({
+			fontSize: 12,
+		});
+	
+	    function makeSeries(name, fieldName, color) {
+			
+	        var series = chart.series.push(
+	            am5xy.LineSeries.new(root, {
+	                name: name,
+	                xAxis: xAxis,
+	                yAxis: yAxis,
+	                valueYField: fieldName,
+	                categoryXField: "date",
+	          		stroke: am5.color(color),
+	          		fill: am5.color(color),
+	                tooltip: am5.Tooltip.new(root, {
+	                    labelText: "{name}: {valueY}"
+	                })
+	            })
+	        );
+	
+	        series.strokes.template.setAll({
+	            strokeWidth: 1.5,
+	            templateField: "strokeSettings"
+	        });
+	
+	        series.data.setAll(data);
+			
+	    }
+	    
+	 	// Create yAxes array to hold multiple yAxes
+	    var yAxes = [];
+	    
+	 	// Function to create yAxes for each series
+	    function createYAxis(seriesIndex, name, color) {
+	    	let axisOptions = {
+// 	            min: 0,  // ✅ Y축 최소값을 0으로 고정
+// 	            strictMinMax: false, //(true면 min, max만 사용 — false면 min만 강제하고 max는 자동)
+	   	        renderer: am5xy.AxisRendererY.new(root, {
+	   	            strokeOpacity: 1,
+	   	            minGridDistance: 100,
+	   	            stroke: am5.color(color)
+	   	        }),
+	   	        extraTooltipText: name,
+	   	        title: am5.Label.new(root, {
+	   	            text: name,
+	   	            fill: am5.color(color),
+	   	            fontWeight: "bold"
+	   	        })
+	   	    };
+	    	
+	   	    // 조건이 true일 때만 min, max 옵션 추가
+	   	    if(selectBoxSwitchList[seriesIndex] == 'Y'){
+	   	        axisOptions.min = 0;
+	   	        axisOptions.max = 5;
+	   	    }
+	
+	   	    var yAxis = am5xy.ValueAxis.new(root, axisOptions);
+	   	    
+	   	    // Set the label color for the Y axis
+	   	    yAxis.get("renderer").labels.template.setAll({
+	   	        fill: am5.color(color),
+	   			fontSize: 12,
+	   	    });
+	        
+	        // 첫 번째 라벨 숨기기 (데이터 설정 후)
+	        yAxis.get("renderer").labels.template.adapters.add("visible", function (visible, target) {
+			    const dataItem = target.dataItem;
+			    if (dataItem && dataItem.get("value") === 0) {
+			        return false; // ✅ Y축 0 값 숨김
+			    }
+			    return visible;
+			});
+	   	    
+	   	    // Add the axis to chart's yAxes
+	   	    chart.yAxes.push(yAxis);
+	   	    yAxes[seriesIndex] = yAxis;
+	   	    return yAxis;
+	    }
+	
+	    var chartColor = [
+	    	"#dc6788",
+	    	"#6794dc",
+	    	"#37ad93"
+		];
+	    
+	    for (var i = 0; i < selectBoxSeriesList.length; i++) {
+	        var yAxis = createYAxis(i, selectBoxSeriesList[i], chartColor[i]);
+			//시리즈 생성
+		    makeSeries(selectBoxSeriesList[i], selectBoxColList[i], chartColor[i]);
+		}
+	
+	    chart.set("cursor", am5xy.XYCursor.new(root, {}));
+	
+	    // Add legend
+	    // https://www.amcharts.com/docs/v5/charts/xy-chart/legend-xy-series/
+	    var legend = chart.children.push(
+	        am5.Legend.new(root, {
+	            centerX: am5.p50,
+	            x: am5.p50
+	        })
+	    );
+	    
+	    legend.labels.template.setAll({
+			fontSize: 14,
+		});
+	    
+	    legend.data.setAll(chart.series.values);
+	
+	 	// add scrollbar
+	    var scrollbar = chart.set("scrollbarX", am5.Scrollbar.new(root, {
+	      orientation: "horizontal",
+	      maxHeight: 3
+	    }));
+	
+	    scrollbar.startGrip.set("scale", 0.7);
+	    scrollbar.endGrip.set("scale", 0.7);
+	    
+	 	// Add export menu
+	    // This will add an export menu to the chart
+	    /* exporting = am5plugins_exporting.Exporting.new(root, {
+			menu: am5plugins_exporting.ExportingMenu.new(root, {
+				align: "left",
+				valign: "top"
+			}),
+			filePrefix: regNo
+		});
+	 	
+	    exporting.get("menu").set("items", [{
+	   	  type: "format",
+	   	  format: "png",
+	   	  label: "PNG"
+	   	}, {
+	   	  type: "format",
+	   	  format: "jpg",
+	   	  label: "JPG"
+	   	}, {
+	   	  type: "separator"
+	   	}, {
+	   	  type: "format",
+	   	  format: "print",
+	   	  label: "Print"
+	   	}]); */
+	    
+	    // Make stuff animate on load
+	    // https://www.amcharts.com/docs/v5/concepts/animations/
+	    chart.appear(1000, 100);
+	    //series1.appear();
+	
+		MyGlobalObject[id] = root;
+		
+	}
+	//
+	
+	//인플럭스 이동경로 좌표
+	function getInfluxData(bus) {
+		
+		removeMarkerPolyline();
+		
+		var endDate = new Date($('#startDate').val()+'T'+$("#endTime").val()+':00');
+		var startDate = new Date($('#startDate').val()+'T'+$("#startTime").val()+':00');
+		
+	    let start_date_time = new Date(startDate).toISOString().split('.')[0] + 'Z';
+	    let end_date_time = new Date(endDate).toISOString().split('.')[0] + 'Z';
+	    
+	    const params = {
+	   		influx_table : mtId,
+			influx_column : "_time, GPS_longitude, GPS_Latitude, VCU_VehicleSpeed_STD",
+	    	start_date_time : start_date_time,
+	    	end_date_time : end_date_time
+	    };
+		
+	    customFetch({
+	        url: '/influx/getSensorHistory',
+	        method: 'POST',
+	        params: params,
+	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	        onSuccess: (response) => {
+	            console.log('getInfluxData 조회 성공:', response);
+	           	setRouteOnMap(response)
+	            
+	        },
+	        onError: (error) => console.error('에러 발생:', error)
+	    });
+	    
+	}
+	
+	//지도 위에 버스 이동 경로 표시
+	function setRouteOnMap(response) {
+		
+		let data = response.result;
+		
+		if(data.length == 0) {
+			removeMarkerPolyline(); //마커 초기화
+			return false;
+		}
+		
+		try{
+	
+			for(var i = 0; i < data.length; i++) {
+				var coord = convertCoordinates(data[i].GPS_longitude, data[i].GPS_Latitude);
+				
+				markerList.push({date : data[i].time, lat : coord[0], lng : coord[1], speed:data[i].VCU_VehicleSpeed_STD});
+				markerPositions.push(coord);
+			}
+			
+	//			console.log("markerList", markerList);
+			setMarker(markerList);
+			
+			
+		}catch(e){
+	
+		}
+	}
+	
+	function map_download() {
+		
+		jQuery("#map_div").printThis({
+	
+			 debug: false,               // show the iframe for debugging
+	
+			 importCSS: true,            // import page CSS
+	
+			 importStyle: true,         // import style tags
+	
+			 printContainer: true,       // grab outer container as well as the contents of the selector
+	
+			 //loadCSS: "path/to/my.css",  // path to additional css file - us an array [] for multiple
+	
+			 pageTitle: "차량 위치",              // add title to print page
+	
+			 //removeInline: false,        // remove all inline styles from print elements
+	
+			 printDelay: 200,            // variable print delay
+	
+			 header: null,               // prefix to html
+	
+			 footer: null,               // postfix to html
+	
+			 base: false,                // preserve the BASE tag, or accept a string for the URL
+	
+			 formValues: true,           // preserve input/form values
+	
+			 canvas: true,              // copy canvas elements (experimental)
+	
+			 doctypeString: '',       // enter a different doctype for older markup
+	
+			 removeScripts: false,       // remove script tags from print content
+		
+			 afterPrint: function() {
+				
+				
+		     }
+	
+		});
+		
+	}
+	
+	function dmsToDecimal(degrees, minutes) {
+	    return degrees + minutes / 60;
+	}
+	
+	function convertCoordinates(longitude, latitude) {
+	    const lonDegrees = Math.floor(longitude / 100);
+	    const lonMinutes = longitude - (lonDegrees * 100);
+	
+	    const latDegrees = Math.floor(latitude / 100);
+	    const latMinutes = latitude - (latDegrees * 100);
+	
+	    const decimalLongitude = dmsToDecimal(lonDegrees, lonMinutes);
+	    const decimalLatitude = dmsToDecimal(latDegrees, latMinutes);
+	
+	    return [decimalLatitude, decimalLongitude];
+	}
+	
+	//이동경로 세팅
+	function setMarker(pathCoords) {
+		
+		removeMarkerPolyline();
+		
+		if(pathCoords.length == 0) {
+			return false;
+		}
+		
+	// 	console.log("pathCoords", pathCoords);
+		
+		for(var i = 0; i < pathCoords.length; i++) {
+			
+			var marker = L.circleMarker([pathCoords[i].lat, pathCoords[i].lng], {
+	            radius: 3, // 동그라미 반지름
+	            fillColor: '#db4455', // 채우기 색상
+	            color: '#db4455', // 테두리 색상
+	            weight: 0.5, // 테두리 두께
+	            opacity: 1, // 테두리 투명도
+	            fillOpacity: 0.5 // 채우기 투명도
+	        }).bindPopup(
+		        `<b>차량번호:</b> ${vhclMasked(regNo)}<br>
+		         <b>일시:</b> ${pathCoords[i].date}<br>
+		         <b>속력:</b> ${formatNumber(pathCoords[i].speed)} km/h`
+		    ).addTo(map);	//버스 마커
+	        
+	     	// 마커에 사용자 정의 속성 추가
+	        marker.options.date = pathCoords[i].date;
+	        marker.options.vehicleSpeed = pathCoords[i].vehicleSpeed;
+	        marker.options.engineSpeed = pathCoords[i].engineSpeed;
+	        
+	     	// 마커 배열에 저장
+	        markers.push(marker);
+	        
+			
+		}
+		
+		// 모든 마커의 좌표를 포함하는 경계 상자(bounding box)를 계산
+		var bounds = L.latLngBounds(markerPositions);
+	
+		// 경계 상자의 중심 좌표를 구함
+		var center = bounds.getCenter();
+	
+		// 중간에 있는 마커의 좌표를 찾기 위한 코드
+		var nearestMarkerCoord;
+		var minDistance = Infinity;
+	
+		// 모든 마커들과 중심점 간의 거리를 계산하여 가장 가까운 마커를 찾음
+		markers.forEach(function(marker) {
+		    var markerCoord = marker.getLatLng();
+		    var distance = markerCoord.distanceTo(center);
+	
+		    if (distance < minDistance) {
+		        minDistance = distance;
+		        nearestMarkerCoord = markerCoord;
+		    }
+		});
+	
+		// 지도를 원하는 좌표로 이동하고 원하는 줌 레벨로 설정
+	// 	console.log("가장 중간에 있는 마커의 좌표:", nearestMarkerCoord);
+		map.setView([nearestMarkerCoord.lat, nearestMarkerCoord.lng], 10);
+		
+	}
+	
+	//마커, 폴리라인 삭제
+	function removeMarkerPolyline() {
+		
+		// 저장된 모든 마커 제거
+	    markers.forEach(function(marker) {
+	        marker.remove();
+	    });
+	    markers = []; // 배열 초기화
+	}
+	</script>
+   
+</body>
+
+</html>

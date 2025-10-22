@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/paging.js}"></script>
+</head>
+<body>
+	<!-- wrap : S -->
+    <div class="wrap" id="wrap">
+    
+        <!-- 상단 헤더 -->
+        <div th:replace="/layout/header :: left-menu-admin"></div>
+	        
+	    <!-- container : S -->
+		<div id="container" class="scrollBar">
+		 	<!-- 메인 컨텐츠 -->
+		    <div class="contents">
+		        <div class="wrapper">
+		        	<div class="tit_wrap">
+                    	<div class="stit_wrap type02">
+	                		<h1 th:text="${pageInfo.pageTitle}"></h1>
+	                	</div>
+	                </div>
+	                
+	                <section class="board_list">
+                        <div class="wh_box">
+                            <div class="tbl_box scrollBar">
+                                <table class="tbl02 none_hover">
+                                    <thead>
+                                        <tr>
+                                            <th class="w5p">
+                                                <input type="checkbox" id="selectAll">
+                                            </th>
+                                            <th class="w10p">No</th>
+                                            <th class="w20p">운수회사</th>
+                                            <th class="">파일명</th>
+                                            <th class="w20p">등록일시</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dataArea">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="btn_area jfright">
+                            <button type="button" class="btn mid bd_red">삭제</button>
+                        </div>
+                        
+                        <div class="paging" id="paging">
+                    	</div>
+                    	
+                    	<!-- 삭제, 적용 팝업 -->
+                    	<div class="pop_wrap" id="popWrap" style="display: none;">
+					        <div class="pop_cont pop_layer">
+					            <div class="pop_head">
+					                <span>알림</span>
+					            </div>
+					            <div class="pop_body">
+					                <div class="pop_alert"><h3>삭제 하시겠습니까?</h3></div>
+					                <div class="tac">
+					                    <button id="cancel" class="btn mid grey mr8">취소</button>
+					                    <button id="confirm" class="btn mid blue">확인</button>
+					                </div>
+					            </div>
+					        </div>
+					    </div>
+                    	
+                    </section>
+	            </div>
+	        </div>
+	        <!-- 푸터 -->
+		    <th:block th:replace="/layout/footer :: footer-simple"></th:block>
+	    
+	    <!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+	    </div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+   	<script>
+	   	$(document).ready(function() {
+	   	    getDataList();
+	   	    $("#searchBtn").on("click", function() {
+	   	        getDataList();
+	   	    });
+
+	   	    // 전체선택 체크박스 이벤트
+	   	    $('#selectAll').on('change', function() {
+	   	        var isChecked = $(this).is(':checked');
+	   	        $('input[name="selectedMembers"]').prop('checked', isChecked);
+	   	    });
+
+	   	    // 개별 체크박스 이벤트 (전체선택 체크박스 상태 업데이트)
+	   	    $(document).on('change', 'input[name="selectedMembers"]', function() {
+	   	        var totalCheckboxes = $('input[name="selectedMembers"]').length;
+	   	        var checkedCheckboxes = $('input[name="selectedMembers"]:checked').length;
+	   	        
+	   	        if (checkedCheckboxes === totalCheckboxes && totalCheckboxes > 0) {
+	   	            $('#selectAll').prop('checked', true);
+	   	        } else {
+	   	            $('#selectAll').prop('checked', false);
+	   	        }
+	   	    });
+
+	   	    // tr 클릭 이벤트 제거하고 파일명 클릭 이벤트로 변경
+	   	    $('#dataArea').on('click', '.file-download', function(e) {
+	   	        e.preventDefault();
+	   	        e.stopPropagation(); // 이벤트 버블링 방지
+	   	        
+	   	        // 클릭된 파일명의 data-file-sn 값 가져오기
+	   	        var fileSn = $(this).data('file-sn');
+	   	        if(fileSn) {
+	   	            window.location.href = contextPath + '/mngr/downloadScheduleFile?fileSn=' + fileSn;
+	   	        }
+	   	    });
+
+	   	    // 삭제 버튼 클릭 이벤트
+	   	    $('.btn.bd_red').on('click', function(e) {
+	   	        e.preventDefault();
+	   	        var checkedItems = $('input[name="selectedMembers"]:checked');
+	   	        if(checkedItems.length === 0) {
+	   	            alert('삭제할 항목을 선택해주세요.');
+	   	            return;
+	   	        }
+	   	        $('#popWrap').show();
+	   	    });
+
+	   	    // 삭제 확인 버튼
+	   	    $('#confirm').on('click', function() {
+	   	        deleteSelectedFiles();
+	   	        $('#popWrap').hide();
+	   	    });
+
+	   	    // 삭제 취소 버튼
+	   	    $('#cancel').on('click', function() {
+	   	        $('#popWrap').hide();
+	   	    });
+	   	});
+
+	   	function getDataList(pageIndex = 1){
+	   	    customFetch({
+	   	        url: '/mngr/getScheduleList',
+	   	        method: 'POST',
+	   	        params: {
+	   	            pageIndex : pageIndex
+	   	        },
+	   	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	   	        onSuccess: (response) => {
+	   	            var html = '';
+	   	            if (response && response.data && response.data.list) {
+	   	                var list = response.data.list;
+	   	                const paginationInfo = response.data.paginationInfo
+	   	                if(list.length > 0){
+	   	                    list.forEach(function(item, index) {
+	   	                        console.log('아이템 데이터:', item); // 디버깅용
+	   	                        console.log('fileSn:', item.fileSn); // 디버깅용
+	   	                        
+	   	                        const rowNumber = (paginationInfo.totalRecordCount || 0) - 
+	   	                            ((paginationInfo.currentPageNo - 1) * (paginationInfo.recordCountPerPage || 10)) - index;
+	   	                        const formattedDate = dayjs(item.regDt).format('YYYY-MM-DD HH:mm:ss');
+	   	                        html += `<tr>
+	   	                            <td class="listtd checkbox-td">
+	   	                                <input type="checkbox" name="selectedMembers" value="${item.fileSn}">
+	   	                            </td>
+	   	                            <td>${rowNumber}</td>
+	   	                            <td>${item.ownrNm}</td>
+	   	                            <td><a href="#" class="file-download" data-file-sn="${item.fileSn}" style="color: #007bff; text-decoration: underline; cursor: pointer;">${item.orgFileNm}</a></td>
+	   	                            <td>${formattedDate}</td>
+	   	                        </tr>`;
+	   	                    });
+	   	                    $("#dataArea").html(html);
+	   	                    
+	   	                    // 데이터 로드 후 전체선택 체크박스 초기화
+	   	                    $('#selectAll').prop('checked', false);
+	   	                    
+	   	                    if (typeof setPagination === 'function') {
+	   	                        setPagination('paging', 'getDataList', response.data.paginationInfo);
+	   	                    }
+	   	                } else {
+	   	                    html += `<tr>
+	   	                        <td colspan="5">조회결과가 없습니다.</td>
+	   	                    </tr>`;
+	   	                    $("#dataArea").html(html);
+	   	                    
+	   	                    // 데이터가 없을 때도 전체선택 체크박스 초기화
+	   	                    $('#selectAll').prop('checked', false);
+	   	                    
+	   	                    setPagination('paging', 'getDataList', response.data.paginationInfo);
+	   	                }
+	   	            }
+	   	        },
+	   	        onError: (error) => console.error('에러:', error)
+	   	    });
+	   	}
+
+	   	function deleteSelectedFiles() {
+	   	    var selectedFileSns = [];
+	   	    $('input[name="selectedMembers"]:checked').each(function() {
+	   	        selectedFileSns.push($(this).val());
+	   	    });
+
+	   	    customFetch({
+	   	        url: '/mngr/deleteScheduleFiles',
+	   	        method: 'POST',
+	   	        params: {
+	   	            fileSns: selectedFileSns
+	   	        },
+	   	        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	   	        onSuccess: (response) => {
+	   	            alert('삭제가 완료되었습니다.');
+	   	            getDataList();
+	   	        },
+	   	        onError: (error) => {
+	   	            alert('삭제 중 오류가 발생했습니다.');
+	   	            console.error('에러:', error);
+	   	        }
+	   	    });
+	   	}
+	</script>
+</body>
+</html>

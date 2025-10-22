@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+
+<head>
+	<th:block th:replace="/layout/head :: head-admin"></th:block>
+	<script th:src="@{/js/egovframework/customChart.js}"></script>
+</head>
+
+<body>
+	<!-- wrap : S -->
+	<div class="wrap" id="wrap">
+
+		<!-- 상단 헤더 -->
+		<div th:replace="/layout/header :: left-menu-admin"></div>
+
+		<!-- container : S -->
+		<div id="container" class="scrollBar">
+			<!-- 메인 컨텐츠 -->
+			<div class="contents">
+				<div class="wrapper">
+					<div class="tit_wrap">
+						<h1 th:text="${pageInfo.pageTitle}"></h1>
+					</div>
+					<div class="filter_section">
+						<div class="wh_box filter_area">
+							<div class="filter_wrap">
+								<div class="top_date">
+									<label>기간</label>
+									<input type="date" id="startDt">
+									<em>~</em>
+									<input type="date" id="endDt">
+								</div>
+								<script>
+									// 오늘 날짜
+									const today = dayjs();
+									// 7일 후 날짜 계산
+									const sevenDaysLater = today.add(-7, 'day');
+
+									// 기본값 설정 (YYYY-MM-DD 형식)
+									document.getElementById('startDt').value = sevenDaysLater.format('YYYY-MM-DD');
+									document.getElementById('endDt').value = today.format('YYYY-MM-DD');
+									document.getElementById('endDt').max = today.format('YYYY-MM-DD');
+								</script>
+								<div class="top_select">
+									<label>운수회사</label>
+									<div th:replace="/common/ownrSelect :: mngr-select"></div>
+									<button type="button" class="btn mid blue" id="searchBtn">검색</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<section>
+						<div class="col01">
+							<div class="wh_box" id="loginArea">
+								<div class="stit_wrap type02">
+									<h2>로그인 현황</h2>
+								</div>
+								<div class="lbox_cont cont_3to7">
+									<div class="graph_area" id="chartDiv1"></div>
+									<div>
+										<ul class="tbl_tab">
+											<li class="on"><a href="#">접속 많은순</a></li>
+											<li><a href="#">최근 접속순</a></li>
+										</ul>
+										<div class="tbl_box scrollBar" id="loginManyDiv">
+											<table class="tbl02 none_hover" style="min-width: 100%;">
+												<thead>
+													<tr>
+														<th>소속</th>
+														<th>권한</th>
+														<th>아이디</th>
+														<th>접속건수</th>
+														<th class="w26p">최근 접속</th>
+													</tr>
+												</thead>
+												<tbody id="loginManyDataArea">
+												</tbody>
+											</table>
+										</div>
+										<div class="tbl_box scrollBar" id="loginRecentDiv">
+											<table class="tbl02 none_hover" style="min-width: 100%;">
+												<thead>
+													<tr>
+														<th>소속</th>
+														<th>권한</th>
+														<th>아이디</th>
+														<th>접속건수</th>
+														<th class="w26p">최근 접속</th>
+													</tr>
+												</thead>
+												<tbody id="loginRecentDataArea">
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="wh_box" id="totalLoginArea">
+								<div class="stit_wrap type02">
+									<h2>전체 접속현황</h2>
+									<span class="ir_btn unit btn_date">
+										<input type="radio" id="unit01" name="totalDatetype" value="date" checked><label class="on"
+											id="unit03_label" tabindex="0" for="unit01">일</label>
+										<input type="radio" id="unit02" name="totalDatetype" value="month"><label id="unit01_label"
+											tabindex="0" for="unit02">월</label>
+									</span>
+								</div>
+								<div class="graph_area" id="chartDiv2" style="width: 100%; height: 300px;"></div>
+							</div>
+							<div class="wh_box" id="menuUseArea">
+								<div class="stit_wrap type02">
+									<h2>메뉴별 접속현황</h2>
+								</div>
+								<div class="lbox_cont cont_3to7">
+									<div class="graph_area" id="chartDiv3"></div>
+									<div>
+										<div class="tbl_box scrollBar">
+											<table class="tbl02 none_hover" style="min-width: 100%;">
+												<thead>
+													<tr>
+														<th>메인 메뉴</th>
+														<th>세부 메뉴</th>
+														<th>접속건수</th>
+													</tr>
+												</thead>
+												<tbody id="totalLoginDataArea">
+													<tr>
+														<td>운행관리</td>
+														<td>AI+리포트</td>
+														<td>11</td>
+													</tr>
+													<tr>
+														<td>운행관리</td>
+														<td>AI+리포트</td>
+														<td>11</td>
+													</tr>
+													<tr>
+														<td>운행관리</td>
+														<td>AI+리포트</td>
+														<td>11</td>
+													</tr>
+													<tr>
+														<td>운행관리</td>
+														<td>AI+리포트</td>
+														<td>11</td>
+													</tr>
+													<tr>
+														<td>운행관리</td>
+														<td>AI+리포트</td>
+														<td>11</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</section>
+				</div>
+			</div>
+			<!-- 푸터 -->
+			<th:block th:replace="/layout/footer :: footer-simple"></th:block>
+
+			<!-- <p>유저 아이디: <span sec:authentication="name"></span></p> -->
+		</div>
+		<!-- container : E -->
+	</div>
+	<!-- wrap : E -->
+	<script>
+		$(document).ready(function () {
+			// 초기 상태: 첫 번째 div만 보이게
+			$('#loginRecentDiv').hide();
+
+			$('.tbl_tab li').click(function () {
+				// 모든 탭에서 'on' 클래스 제거
+				$('.tbl_tab li').removeClass('on');
+				// 클릭된 탭에 'on' 클래스 추가
+				$(this).addClass('on');
+
+				// 탭 인덱스 확인
+				var tabIndex = $(this).index();
+
+				if (tabIndex === 0) {
+					// 접속 많은순 탭 클릭
+					$('#loginManyDiv').show();
+					$('#loginRecentDiv').hide();
+				} else {
+					// 최근 접속순 탭 클릭
+					$('#loginManyDiv').hide();
+					$('#loginRecentDiv').show();
+				}
+			});
+
+			searchStat();
+			$("#searchBtn").on("click", function () {
+				searchStat();
+			});
+
+			$('input[name="totalDatetype"]').on('click', function () {
+				const inputId = $(this).attr('id'); // input의 id 가져오기
+				const label = $('label[for="' + inputId + '"]'); // 연결된 label 선택
+
+				// 모든 label에서 'on' 제거
+				$('input[name="totalDatetype"]').each(function () {
+					const lbl = $('label[for="' + $(this).attr('id') + '"]');
+					lbl.removeClass('on');
+				});
+
+				// 클릭한 input의 label에 'on' 추가
+				label.addClass('on');
+
+				// input 체크
+				$(this).prop('checked', true);
+
+				getTotalLoginStat();
+			});
+		});
+
+		function searchStat() {
+			getLoginStat();
+			getTotalLoginStat();
+			getMenuUseStat();
+		}
+
+		function getLoginStat() {
+			var ownrNm = $("#ownrSelect").val();
+			var startDt = $("#startDt").val();
+			var endDt = $("#endDt").val();
+
+			customFetch({
+				url: '/mngr/getLoginStat',
+				method: 'POST',
+				params: {
+					ownrNm: ownrNm,
+					startDt: startDt,
+					endDt: endDt
+				},
+				loadingId: "loginArea",
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				onSuccess: (response) => {
+					let ownrLoginlist = response.data.ownrLoginlist;
+					let loginManyRankStat = response.data.loginManyRankStat;
+					let loginRecentStat = response.data.loginRecentStat;
+					pieChart("chartDiv1", ownrLoginlist, 'ownrNm');
+					setLoginTable("loginManyDataArea", loginManyRankStat);
+					setLoginTable("loginRecentDataArea", loginRecentStat);
+				},
+				onError: (error) => console.error('에러:', error)
+			});
+		}
+
+		function setLoginTable(area, data) {
+			let html;
+			if (data.length > 0) {
+				data.forEach(function (item) {
+					let role;
+					const formattedDate = dayjs(item.regDt).format('YYYY-MM-DD HH:mm:ss');
+					if (item.mbrRole == 'ROLE_ADMIN') {
+						role = '시스템 관리자';
+					} else if (item.mbrRole == 'ROLE_MANAGER') {
+						role = '관리자';
+					} else if (item.mbrRole == 'ROLE_MECHANIC') {
+						role = '정비사';
+					} else {
+						role = item.mbrRole;
+					}
+					html += `
+	   					<tr>
+		                	<td>${item.ownrNm}</td>
+		                	<td>${role}</td>
+		                	<td>${item.mbrId}</td>
+		                	<td>${item.cnt}</td>
+		                	<td>${formattedDate}</td>
+	                	</tr>
+	   				`;
+
+					$("#" + area).html(html);
+				});
+			} else {
+				html += `
+   					<tr>
+	                	<td colspan="5">조회 결과가 없습니다.</td>
+                	</tr>
+   				`;
+
+				$("#" + area).html(html);
+			}
+
+		}
+
+		function getTotalLoginStat() {
+			var dateType = $('input[name="totalDatetype"]:checked').val();
+			var ownrNm = $("#ownrSelect").val();
+			var startDt = $("#startDt").val();
+			var endDt = $("#endDt").val();
+
+			customFetch({
+				url: '/mngr/getTotalLoginStat',
+				method: 'POST',
+				params: {
+					ownrNm: ownrNm,
+					startDt: startDt,
+					endDt: endDt,
+					dateType: dateType
+				},
+				loadingId: "totalLoginArea",
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				onSuccess: (response) => {
+					makeLineChart('chartDiv2', response.data.connUserCnt, xKey = 'regDt')
+				},
+				onError: (error) => console.error('에러:', error)
+			});
+		}
+
+		function getMenuUseStat() {
+			var ownrNm = $("#ownrSelect").val();
+			var startDt = $("#startDt").val();
+			var endDt = $("#endDt").val();
+
+			customFetch({
+				url: '/mngr/getMenuUseStat',
+				method: 'POST',
+				params: {
+					ownrNm: ownrNm,
+					startDt: startDt,
+					endDt: endDt
+				},
+				loadingId: "menuUseArea",
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				onSuccess: (response) => {
+					let menuUseStat = response.data.menuUseStat;
+					// 		        	let svcNmStat = Object.entries(
+					// 	        			menuUseStat.reduce((acc, item) => {
+					// 					        acc[item.svcNm] = (acc[item.svcNm] || 0) + item.건수;
+					// 					        return acc;
+					// 					    }, {})
+					// 					).map(([svcNm, 건수]) => ({ svcNm, 건수 }));
+					pieChart("chartDiv3", menuUseStat, 'svcNm2');
+
+					let html;
+					if (menuUseStat.length > 0) {
+						const limitedData = menuUseStat.slice(0, 5);
+						menuUseStat.forEach(function (item) {
+							html += `
+			   					<tr>
+				                	<td>${item.svcNm}</td>
+				                	<td>${item.svcNm2}</td>
+				                	<td>${item.건수}</td>
+			                	</tr>
+			   				`;
+
+							$("#totalLoginDataArea").html(html);
+						});
+					} else {
+						html += `
+		   					<tr>
+			                	<td colspan="3">조회 결과가 없습니다.</td>
+		                	</tr>
+		   				`;
+
+						$("#totalLoginDataArea").html(html);
+					}
+				},
+				onError: (error) => console.error('에러:', error)
+			});
+		}
+	</script>
+</body>
+
+</html>
