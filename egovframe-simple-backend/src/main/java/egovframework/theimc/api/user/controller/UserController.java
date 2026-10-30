@@ -1,39 +1,37 @@
 package egovframework.theimc.api.user.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-import egovframework.theimc.api.user.model.RegisterRequest;
+import egovframework.theimc.api.user.model.UserDTO;
 import egovframework.theimc.api.user.service.UserService;
-import egovframework.theimc.common.model.ResultVO;
+import egovframework.theimc.common.auth.model.JwtUserInfo;
 
-@RestController
-@RequestMapping("/api/users")
+@Controller
+@RequestMapping("/user")
 public class UserController {
 
   @Autowired
   private UserService userService;
 
-  @PostMapping("/register")
-  public ResponseEntity<ResultVO> register(@RequestBody RegisterRequest request) {
-
-    ResultVO resultVO = userService.register(request);
-    HttpStatus status = resultVO.getResultCode() == 200 ? HttpStatus.CREATED : HttpStatus.CONFLICT;
-    return ResponseEntity.status(status).body(resultVO);
+  @GetMapping("/profile/verifyPassword")
+  public String verifyPassword() {
+    return "mbr/verifyPasswordForm";
   }
 
-  @PostMapping("/update")
-  public ResponseEntity<ResultVO> update(@RequestBody RegisterRequest request) {
-    // TODO: process POST request
+  @GetMapping("/profile/edit")
+  public String profileUpdateForm(Model model) {
+    JwtUserInfo jwtUserInfo = (JwtUserInfo) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    String userId = jwtUserInfo.getName();
+    UserDTO user = userService.getUserById(userId);
 
-    ResultVO resultVO = userService.update(request);
-    HttpStatus status = resultVO.getResultCode() == 200 ? HttpStatus.OK : HttpStatus.CONFLICT;
-    return ResponseEntity.status(status).body(resultVO);
+    model.addAttribute("user", user);
+
+    return "mbr/profileUpdateForm";
   }
 
 }

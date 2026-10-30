@@ -1,6 +1,5 @@
 package egovframework.theimc.common.auth.service;
 
-import egovframework.theimc.api.user.entity.User;
 import egovframework.theimc.common.auth.model.LoginRequest;
 import egovframework.theimc.common.auth.model.LoginResponse;
 
@@ -14,6 +13,8 @@ public interface LoginService {
    * @exception Exception Exception
    */
   public LoginResponse actionLogin(LoginRequest vo) throws Exception;
+
+  public LoginResponse refreshLogin(String refreshToken) throws Exception;
 
   // /**
   // * 아이디를 찾는다.

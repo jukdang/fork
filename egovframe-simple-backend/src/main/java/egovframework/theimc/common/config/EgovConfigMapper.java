@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 @Configuration
-@MapperScan(basePackages = "egovframework.theimc.*.service.impl")
+@MapperScan(basePackages = "egovframework.theimc.**.service.impl")
 public class EgovConfigMapper {
 
 	@Bean
@@ -22,8 +22,10 @@ public class EgovConfigMapper {
 		PathMatchingResourcePatternResolver pmrpr = new PathMatchingResourcePatternResolver();
 		SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
 		sqlSessionFactoryBean.setDataSource(dataSource);
-		sqlSessionFactoryBean.setConfigLocation(pmrpr.getResource("classpath:/sqlmap/sql-mapper-config.xml"));
-		sqlSessionFactoryBean.setMapperLocations(pmrpr.getResources("classpath:/sqlmap/mappers/*.xml"));
+		sqlSessionFactoryBean
+				.setConfigLocation(pmrpr.getResource("classpath:/sqlmap/sql-mapper-config.xml"));
+		sqlSessionFactoryBean
+				.setMapperLocations(pmrpr.getResources("classpath:/sqlmap/mappers/*.xml"));
 		return sqlSessionFactoryBean;
 	}
 
